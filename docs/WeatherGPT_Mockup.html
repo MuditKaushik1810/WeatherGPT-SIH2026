@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeatherGPT — Product Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dusk-950:#0E1626; --dusk-900:#131E33; --dusk-800:#1C2C4A; --dusk-700:#28395C;
+    --dawn-400:#F2A65E; --dawn-300:#F7C08A;
+    --monsoon-500:#2E9484; --monsoon-300:#7FCABE;
+    --storm-500:#E2583E; --storm-300:#F1A392;
+    --earth-500:#B5793E; --earth-300:#E0B587;
+    --cloud-100:#EEF3F9; --cloud-050:#F8FAFD;
+    --mist-400:#8393AF; --mist-600:#5B6A88;
+    --line: rgba(238,243,249,0.10);
+    --display:'Fraunces', serif; --body:'Work Sans', sans-serif; --mono:'JetBrains Mono', monospace;
+    --radius:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--dusk-950); color:var(--cloud-100); font-family:var(--body);}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 900px 500px at 85% -8%, rgba(242,166,94,0.10), transparent 60%),
+      radial-gradient(ellipse 1100px 700px at 5% 105%, rgba(46,148,132,0.10), transparent 55%),
+      linear-gradient(180deg, var(--dusk-950) 0%, var(--dusk-900) 45%, #101B30 100%);
+  }
+  ::selection{ background: rgba(242,166,94,0.28); }
+
+  .shell{ max-width:1360px; margin:0 auto; padding: 36px 28px 70px; }
+
+  /* ---- Masthead ---- */
+  .masthead{ display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-bottom:30px; flex-wrap:wrap; }
+  .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--dawn-400); margin-bottom:10px; display:flex; align-items:center; gap:8px;}
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:var(--monsoon-300); box-shadow:0 0 8px var(--monsoon-300);}
+  h1{ font-family:var(--display); font-weight:600; font-size:clamp(30px,4vw,44px); letter-spacing:-0.01em; color:#fff; }
+  h1 em{ font-style:italic; color:var(--dawn-400); }
+  .masthead p{ color:var(--mist-400); font-size:14.5px; max-width:560px; margin-top:8px; line-height:1.55;}
+  .meta-tags{ display:flex; gap:8px; flex-wrap:wrap; }
+  .meta-tag{ font-family:var(--mono); font-size:10.5px; color:var(--mist-400); border:1px solid var(--line); padding:6px 11px; border-radius:20px; }
+
+  /* ---- Tabs ---- */
+  .tabbar{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:30px; padding:6px; background:var(--dusk-800); border:1px solid var(--line); border-radius:14px; width:fit-content; }
+  .tab{
+    font-family:var(--body); font-weight:600; font-size:13px; color:var(--mist-400); background:none; border:none;
+    padding:10px 16px; border-radius:9px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .15s ease;
+    white-space:nowrap;
+  }
+  .tab:hover{ color:var(--cloud-100); }
+  .tab.active{ background:var(--dusk-700); color:#fff; }
+  .tab .swatch{ width:8px; height:8px; border-radius:50%; }
+
+  /* ---- Panel layout ---- */
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  .split{ display:grid; grid-template-columns: 360px 1fr; gap:26px; align-items:start; }
+  @media (max-width: 880px){ .split{ grid-template-columns: 1fr; } }
+
+  /* ---- Phone frame ---- */
+  .phone-wrap{ display:flex; justify-content:center; }
+  .phone{
+    width:360px; background:#0A1220; border:10px solid #050A14; border-radius:38px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+    overflow:hidden; position:relative;
+  }
+  .notch{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:22px; background:#050A14; border-radius:0 0 14px 14px; z-index:5;}
+  .screen{ min-height:680px; display:flex; flex-direction:column; background:linear-gradient(180deg,#101B30,#0C1526); padding-top:30px;}
+
+  .app-topbar{ padding:14px 18px 12px; border-bottom:1px solid var(--line); }
+  .app-title-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .app-title{ font-family:var(--display); font-weight:600; font-size:17px; color:#fff; }
+  .icon-btn{ width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; }
+  .pill-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .pill{ font-family:var(--mono); font-size:10px; padding:4px 9px; border-radius:20px; background:rgba(255,255,255,0.06); color:var(--mist-400); }
+  .pill.on{ background:rgba(242,166,94,0.16); color:var(--dawn-400); }
+  .pill.earth{ background:rgba(181,121,62,0.22); color:var(--earth-300); }
+
+  .alert-banner{ margin:10px 14px 0; background:linear-gradient(135deg, rgba(226,88,62,0.22), rgba(226,88,62,0.10)); border:1px solid rgba(226,88,62,0.4); border-radius:12px; padding:10px 12px; font-size:11.5px; line-height:1.4; }
+  .alert-banner b{ color:var(--storm-300); }
+
+  .chip{ display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9.5px; padding:3px 8px; border-radius:6px; margin-top:6px; }
+  .chip.exact{ background:rgba(46,148,132,0.18); color:var(--monsoon-300); }
+  .chip.fallback{ background:rgba(242,166,94,0.18); color:var(--dawn-400); }
+  .chip.hist{ background:rgba(131,147,175,0.18); color:var(--mist-400); }
+  .chip.official{ background:rgba(226,88,62,0.18); color:var(--storm-300); }
+  .chip::before{ content:"●"; font-size:6px; }
+
+  .chat-area{ flex:1; padding:14px; display:flex; flex-direction:column; gap:10px; overflow-y:auto; }
+  .bubble{ max-width:82%; padding:10px 13px; border-radius:14px; font-size:12.8px; line-height:1.45; }
+  .bubble.user{ align-self:flex-end; background:var(--dusk-700); border-bottom-right-radius:4px; }
+  .bubble.bot{ align-self:flex-start; background:rgba(255,255,255,0.05); border:1px solid var(--line); border-bottom-left-radius:4px; }
+  .bubble .sub{ color:var(--mist-400); font-size:10.5px; margin-top:4px; }
+
+  .input-bar{ margin:10px 14px 16px; display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid var(--line); border-radius:24px; padding:8px 8px 8px 16px; }
+  .input-bar input{ flex:1; background:none; border:none; outline:none; color:var(--cloud-100); font-family:var(--body); font-size:12.5px; }
+  .mic{ width:32px; height:32px; border-radius:50%; background:var(--dawn-400); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+  /* Farmer screen bits */
+  .crop-selector{ display:flex; gap:6px; padding:10px 14px 4px; overflow-x:auto; }
+  .crop-chip{ font-family:var(--body); font-weight:600; font-size:11px; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.05); color:var(--mist-400); white-space:nowrap; border:1px solid transparent; }
+  .crop-chip.active{ background:rgba(181,121,62,0.22); color:var(--earth-300); border-color:rgba(181,121,62,0.4); }
+
+  .risk-card{ margin:12px 14px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:16px; padding:16px; text-align:center;}
+  .gauge{ width:130px; height:130px; margin:4px auto 8px; position:relative; }
+  .gauge svg{ transform:rotate(-90deg); }
+  .gauge-label{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .gauge-num{ font-family:var(--mono); font-weight:700; font-size:26px; color:var(--dawn-400); }
+  .gauge-sub{ font-family:var(--mono); font-size:9px; color:var(--mist-400); text-transform:uppercase; letter-spacing:0.05em;}
+  .risk-note{ font-size:11px; color:var(--mist-400); margin-top:6px; }
+
+  .advisory-card{ margin:0 14px 12px; background:rgba(242,166,94,0.08); border:1px solid rgba(242,166,94,0.25); border-radius:14px; padding:12px 14px;}
+  .advisory-card .head{ font-family:var(--body); font-weight:700; font-size:12px; color:var(--dawn-400); margin-bottom:5px; display:flex; align-items:center; gap:6px;}
+  .advisory-card p{ font-size:11.5px; color:var(--cloud-100); line-height:1.5;}
+
+  /* Trip screen */
+  .trip-input{ margin:12px 14px; background:rgba(255,255,255,0.05); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:12px; color:var(--mist-400); }
+  .trip-input b{ color:#fff; }
+  .day-scroll{ display:flex; gap:8px; padding:6px 14px; overflow-x:auto; }
+  .day-card{ flex-shrink:0; width:88px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:12px; padding:10px 8px; text-align:center; }
+  .day-card.hist{ background:rgba(131,147,175,0.07); border-color:rgba(131,147,175,0.25); }
+  .day-card .d{ font-family:var(--mono); font-size:10px; color:var(--mist-400); margin-bottom:4px;}
+  .day-card .t{ font-family:var(--mono); font-weight:700; font-size:14px; color:#fff; }
+  .day-card .n{ font-size:9.5px; color:var(--mist-400); margin-top:4px; line-height:1.3; min-height:26px;}
+  .trip-summary{ margin:10px 14px 16px; background:rgba(255,255,255,0.05); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:11.8px; line-height:1.55; color:var(--cloud-100);}
+
+  /* Disaster view */
+  .stat-row{ margin:12px 14px 6px; font-family:var(--mono); font-size:11px; color:var(--storm-300); }
+  .region-list{ padding:6px 14px; display:flex; flex-direction:column; gap:8px; }
+  .region-card{ background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;}
+  .region-card .name{ font-size:12px; font-weight:600; color:#fff; }
+  .region-card .type{ font-family:var(--mono); font-size:9.5px; color:var(--mist-400); margin-top:2px;}
+  .sev{ font-family:var(--mono); font-size:9.5px; padding:4px 8px; border-radius:6px; }
+  .sev.high{ background:rgba(226,88,62,0.2); color:var(--storm-300); }
+  .sev.med{ background:rgba(242,166,94,0.2); color:var(--dawn-400); }
+
+  /* Historical */
+  .filter-row{ display:flex; gap:6px; padding:12px 14px 4px; flex-wrap:wrap; }
+  .chart-box{ margin:10px 14px; background:rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:14px; padding:14px; }
+  .chart-box svg{ width:100%; height:auto; }
+  .chart-legend{ display:flex; gap:14px; margin-top:8px; font-family:var(--mono); font-size:9.5px; color:var(--mist-400); }
+  .chart-legend .sw{ width:8px; height:8px; border-radius:2px; display:inline-block; margin-right:4px;}
+
+  /* ---- Annotation panel ---- */
+  .annotate{ background:var(--dusk-800); border:1px solid var(--line); border-radius:var(--radius); padding:26px; }
+  .annotate h2{ font-family:var(--display); font-size:22px; font-weight:600; color:#fff; margin-bottom:4px; }
+  .annotate .persona{ font-family:var(--mono); font-size:11px; color:var(--dawn-400); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:18px; }
+  .spec{ margin-bottom:18px; }
+  .spec .tag{ font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:0.1em; padding:3px 0; display:inline-block; margin-bottom:6px; }
+  .spec.does .tag{ color:var(--cloud-100); }
+  .spec.why .tag{ color:var(--monsoon-300); }
+  .spec.better .tag{ color:var(--dawn-400); }
+  .spec.limit .tag{ color:var(--storm-300); }
+  .spec p{ font-size:13.3px; line-height:1.65; color:var(--mist-400); }
+  .spec p b{ color:var(--cloud-100); font-weight:600; }
+
+  /* ---- Overview panel ---- */
+  .pillars{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+  @media (max-width:880px){ .pillars{ grid-template-columns:1fr 1fr; } }
+  .pillar{ background:var(--dusk-800); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  .pillar .n{ font-family:var(--mono); font-size:10px; color:var(--mist-400); margin-bottom:8px;}
+  .pillar h3{ font-family:var(--display); font-size:17px; color:#fff; margin-bottom:8px; font-weight:600;}
+  .pillar p{ font-size:12.3px; color:var(--mist-400); line-height:1.55; }
+
+  table.compare{ width:100%; border-collapse:collapse; background:var(--dusk-800); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  table.compare th{ text-align:left; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--mist-400); padding:14px 16px; border-bottom:1px solid var(--line); background:var(--dusk-700); }
+  table.compare td{ padding:13px 16px; font-size:12.5px; border-bottom:1px solid var(--line); color:var(--cloud-100); }
+  table.compare tr:last-child td{ border-bottom:none; }
+  table.compare .no{ color:var(--mist-400); }
+  table.compare .yes{ color:var(--monsoon-300); font-weight:600; }
+
+  .footer-note{ margin-top:30px; font-family:var(--mono); font-size:11px; color:var(--mist-400); padding-top:18px; border-top:1px solid var(--line); line-height:1.7;}
+
+  /* Offline screen */
+  .signal-badge{ font-family:var(--mono); font-size:9.5px; color:var(--mist-400); background:rgba(255,255,255,0.06); padding:5px 9px; border-radius:20px; }
+  .offline-banner{ margin:10px 14px 0; background:rgba(131,147,175,0.14); border:1px solid rgba(131,147,175,0.35); border-radius:12px; padding:10px 12px; font-size:11.3px; line-height:1.45; color:var(--cloud-100); }
+  .bubble.queued{ background:rgba(242,166,94,0.08); border:1px dashed rgba(242,166,94,0.4); }
+
+  /* Roadmap */
+  .roadmap-list{ display:flex; flex-direction:column; gap:16px; }
+  .rm-item{ padding:16px 18px; background:rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:12px; }
+  .rm-head{ margin-bottom:8px; }
+  .rm-tier{ font-family:var(--mono); font-size:9.5px; padding:4px 9px; border-radius:20px; letter-spacing:0.03em; }
+  .rm-tier.strong{ background:rgba(46,148,132,0.18); color:var(--monsoon-300); }
+  .rm-tier.moderate{ background:rgba(242,166,94,0.18); color:var(--dawn-400); }
+  .rm-tier.explore{ background:rgba(131,147,175,0.18); color:var(--mist-400); }
+  .rm-item h3{ font-family:var(--display); font-size:15.5px; font-weight:600; color:#fff; margin-bottom:5px; }
+  .rm-item p{ font-size:12.3px; color:var(--mist-400); line-height:1.55; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow"><span class="dot"></span> SIH26068 · PRODUCT MOCKUP · WORKING DRAFT</div>
+      <h1>Weather<em>GPT</em></h1>
+      <p>A grounded, proactive, role-aware weather-intelligence platform — not a chatbot skin. Click through each screen below; the panel beside it explains what it does, why it exists, and where it's honestly still thin.</p>
+    </div>
+    <div class="meta-tags">
+      <span class="meta-tag">IMD · MoES</span>
+      <span class="meta-tag">Disaster Management</span>
+      <span class="meta-tag">7 screens</span>
+    </div>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="overview"><span class="swatch" style="background:var(--dawn-400)"></span>Overview</button>
+    <button class="tab" data-tab="chat"><span class="swatch" style="background:var(--monsoon-300)"></span>General Chat</button>
+    <button class="tab" data-tab="farmer"><span class="swatch" style="background:var(--earth-300)"></span>Farmer Advisory</button>
+    <button class="tab" data-tab="trip"><span class="swatch" style="background:var(--dawn-300)"></span>Trip Planner</button>
+    <button class="tab" data-tab="disaster"><span class="swatch" style="background:var(--storm-300)"></span>Disaster View</button>
+    <button class="tab" data-tab="hist"><span class="swatch" style="background:var(--mist-400)"></span>Historical Analytics</button>
+    <button class="tab" data-tab="offline"><span class="swatch" style="background:var(--monsoon-300)"></span>Offline Mode</button>
+    <button class="tab" data-tab="roadmap"><span class="swatch" style="background:var(--dawn-400)"></span>Roadmap</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="panel active" id="panel-overview">
+    <div class="pillars">
+      <div class="pillar"><div class="n">01 · GROUNDED</div><h3>Every number is sourced</h3><p>Answers are tagged with exactly which data tier produced them — official IMD warning, live grid forecast, or historical baseline — never an opaque guess.</p></div>
+      <div class="pillar"><div class="n">02 · PROACTIVE</div><h3>Pushes, doesn't just wait</h3><p>A background poller watches saved locations and surfaces alerts before anyone thinks to ask — a generic chatbot only ever responds.</p></div>
+      <div class="pillar"><div class="n">03 · PERSISTENT</div><h3>Remembers your context</h3><p>A farmer's crop, field, and sowing date live in a real profile — no re-explaining your situation every single chat.</p></div>
+      <div class="pillar"><div class="n">04 · DOMAIN-AWARE</div><h3>Curated, not improvised</h3><p>Crop thresholds and pest triggers are sourced from ICAR/GKMS advisories — cited rules, not a plausible-sounding guess.</p></div>
+    </div>
+
+    <table class="compare">
+      <tr><th>Capability</th><th>Regular weather app</th><th>Generic LLM (ChatGPT/Gemini)</th><th>WeatherGPT</th></tr>
+      <tr><td>Natural-language Q&A</td><td class="no">No</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Voice + multilingual</td><td class="no">Partial</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+      <tr><td>Pushes an alert unprompted</td><td class="no">Sometimes</td><td class="no">No — reactive only</td><td class="yes">Yes — background poller</td></tr>
+      <tr><td>Persistent crop/field profile</td><td class="no">No</td><td class="no">No — starts cold each chat</td><td class="yes">Yes</td></tr>
+      <tr><td>Cited domain rules (crop thresholds)</td><td class="no">No</td><td class="no">No — general training, uncited</td><td class="yes">Yes — ICAR/GKMS sourced</td></tr>
+      <tr><td>Traceable data source per answer</td><td class="no">No</td><td class="no">No — search is a black box</td><td class="yes">Yes — data-tier chip on every answer</td></tr>
+      <tr><td>Repeatable computed risk score</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes — Crop Risk Index</td></tr>
+    </table>
+
+    <div class="footer-note">The honest reading of this table: rows 1–2 are table stakes we share with any generic LLM — that's not the pitch. Rows 3–7 are the actual claim: turning a general model into a reliable, proactive, sourced system takes real engineering, and that engineering is the product. → Click "Farmer Advisory" to see the strongest proof of this in the actual UI.</div>
+  </div>
+
+  <!-- GENERAL CHAT -->
+  <div class="panel" id="panel-chat">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar">
+          <div class="app-title-row"><span class="app-title">WeatherGPT</span><div class="icon-btn">🌐</div></div>
+          <div class="pill-row"><span class="pill on">📍 New Delhi</span><span class="pill">EN / हिं</span><span class="pill">🔊 Voice on</span></div>
+        </div>
+        <div class="alert-banner"><b>⚠ Heavy rainfall warning</b> — South Delhi, valid till 8 PM today.<br><span class="chip official">IMD official warning</span></div>
+        <div class="chat-area">
+          <div class="bubble user">Will it rain during my evening commute?</div>
+          <div class="bubble bot">Yes — 68% chance of rain 6–8 PM in New Delhi, with gusty winds. Carry an umbrella.<div class="sub"><span class="chip exact">Open-Meteo · exact grid match</span></div></div>
+          <div class="bubble user">मौसम कैसा रहेगा?</div>
+          <div class="bubble bot">आज दोपहर हल्की बारिश की संभावना है, तापमान 27°C रहेगा।<div class="sub"><span class="chip exact">Open-Meteo · exact grid match</span> 🔊</div></div>
+          <div class="bubble user">Cyclone warning near Chennai?</div>
+          <div class="bubble bot">No active cyclone warning specifically for Chennai district right now, but a regional advisory for Tamil Nadu coast is in effect — monitor for updates.<div class="sub"><span class="chip fallback">Degradation ladder · regional fallback</span></div></div>
+        </div>
+        <div class="input-bar"><input placeholder="Ask about weather, in any language…"><div class="mic">🎙</div></div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>General Chat</h2>
+        <div class="persona">Persona: everyone · baseline layer</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Natural-language Q&A in English + Indian languages, voice in/out, proactive alert banners, and — the signature detail — every answer carries a visible <b>source chip</b> showing exactly which data tier produced it.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>Satisfies the PS's literal brief as a general conversational platform. It's also the shared foundation every other screen is built on top of.</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>Unlike a regular weather app, any phrasing works. Unlike ChatGPT's web search, the source is never a black box — and it pushes the cyclone-warning banner before you ask.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>On a single one-off question like the first bubble above, a generic LLM with browsing does nearly as well. <b>This screen alone is not the pitch</b> — it's necessary, not sufficient.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FARMER -->
+  <div class="panel" id="panel-farmer">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar">
+          <div class="app-title-row"><span class="app-title">Farmer Mode</span><div class="icon-btn">🌾</div></div>
+          <div class="pill-row"><span class="pill earth">Sonipat, Haryana</span><span class="pill earth">Sown 12 Nov</span></div>
+        </div>
+        <div class="crop-selector">
+          <span class="crop-chip active">Wheat</span><span class="crop-chip">Mustard</span><span class="crop-chip">Gram</span><span class="crop-chip">Rice</span><span class="crop-chip">Cotton</span><span class="crop-chip">Maize</span><span class="crop-chip">Soybean</span><span class="crop-chip">Groundnut</span>
+        </div>
+        <div class="risk-card">
+          <div class="gauge">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <circle cx="65" cy="65" r="54" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12"/>
+              <circle cx="65" cy="65" r="54" fill="none" stroke="#F2A65E" stroke-width="12" stroke-dasharray="339" stroke-dashoffset="129" stroke-linecap="round"/>
+            </svg>
+            <div class="gauge-label"><span class="gauge-num">62</span><span class="gauge-sub">Moderate risk</span></div>
+          </div>
+          <div class="risk-note">+18 vs 10-yr baseline for this date <span class="chip hist">Historical baseline · 10yr avg</span></div>
+        </div>
+        <div class="advisory-card">
+          <div class="head">⏱ Harvest window advisory</div>
+          <p>Complete harvest before <b>Thursday</b> — rising humidity + 70% rain chance Fri–Sat raises lodging &amp; fungal risk.</p>
+          <span class="chip fallback">IMD forecast + ICAR wheat rule table</span>
+        </div>
+        <div class="chat-area" style="padding-top:0;">
+          <div class="bubble user">aphid dikh rahe hain, kya karu?</div>
+          <div class="bubble bot">Cloudy weather + falling night temps this week raise aphid risk in wheat. Spray Thiometon 25EC (8ml/10L water) on new growth.<div class="sub"><span class="chip fallback">ICAR Rabi Advisory 2025</span></div></div>
+        </div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>Farmer Advisory</h2>
+        <div class="persona">Persona: farmer · flagship differentiator</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Persistent crop profile, an 8-crop curated rule table (sowing windows, thresholds, pest triggers), a computed <b>Crop Risk Index</b> weighted against a real historical baseline, a harvest-timing advisory, and free-text crop Q&A grounded in the rule table rather than the model's general training.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>This is the concrete proof of the whole differentiation argument. A chatbot can say "it might rain" — it can't say "your wheat is at grain-filling stage, harvest before Thursday," unless someone built that logic and fed it in.</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>ChatGPT has no persistent profile and no cited source for farming advice. Government portals (Kisan Suvidha etc.) are form-heavy, not conversational, and not personalized to one field's exact stage.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>8 crops with general thresholds — not hyper-local soil/variety nuance a real agronomist would weigh. This is <b>decision support, not a replacement</b> for an extension officer, and should be pitched that way.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRIP -->
+  <div class="panel" id="panel-trip">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar"><div class="app-title-row"><span class="app-title">Plan a trip</span><div class="icon-btn">✈️</div></div></div>
+        <div class="trip-input">Trip to <b>Manali</b> · 7 days from <b>14 May</b></div>
+        <div class="day-scroll">
+          <div class="day-card"><div class="d">Day 1</div><div class="t">14°</div><div class="n">Clear</div><span class="chip exact" style="margin-top:6px;">Live</span></div>
+          <div class="day-card"><div class="d">Day 2</div><div class="t">16°</div><div class="n">Partly cloudy</div><span class="chip exact" style="margin-top:6px;">Live</span></div>
+          <div class="day-card"><div class="d">Day 3</div><div class="t">13°</div><div class="n">60% rain — pack a layer</div><span class="chip exact" style="margin-top:6px;">Live</span></div>
+          <div class="day-card"><div class="d">Day 5</div><div class="t">18°</div><div class="n">Best outdoor day</div><span class="chip exact" style="margin-top:6px;">Live</span></div>
+          <div class="day-card hist"><div class="d">Day 12</div><div class="t">~19°</div><div class="n">Beyond forecast horizon</div><span class="chip hist" style="margin-top:6px;">10yr avg</span></div>
+        </div>
+        <div class="trip-summary">Days 1–7 use live forecast data. Best outdoor day looks like <b>Day 5</b> (clear, 18°C). Pack a rain layer for Day 3. Days beyond 16 out are shown as typical conditions from the last 10 years, not a real forecast.<div style="margin-top:6px;"><span class="chip hist">Forecast-horizon router</span></div></div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>Trip Planner</h2>
+        <div class="persona">Persona: traveler · moderate-depth feature</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Turns a whole trip into one coherent, synthesized answer instead of seven separate lookups — and explicitly labels whether each day is a real forecast or a historical estimate.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>Demonstrates the system reasoning across a time range, not just answering isolated facts — a genuinely different interaction shape from "what's the weather."</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>Weather apps hand you 7 days of raw numbers and leave the synthesis to you. A generic chatbot might synthesize too — but won't reliably flag when it's quietly guessing past the forecast horizon.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>Closer to "smart formatting of existing data" than genuinely novel logic. It's a real feature, but the <b>lightest-weight one</b> here — first to trim if time runs short.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISASTER -->
+  <div class="panel" id="panel-disaster">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar"><div class="app-title-row"><span class="app-title">Regional Alerts</span><div class="icon-btn">🛰</div></div></div>
+        <div class="stat-row">● 14 active alerts across 6 states</div>
+        <div class="region-list">
+          <div class="region-card"><div><div class="name">Tamil Nadu Coast</div><div class="type">Cyclone advisory · IMD</div></div><span class="sev high">HIGH</span></div>
+          <div class="region-card"><div><div class="name">South Delhi NCR</div><div class="type">Heavy rainfall · IMD</div></div><span class="sev high">HIGH</span></div>
+          <div class="region-card"><div><div class="name">Vidarbha, Maharashtra</div><div class="type">Heatwave watch · IMD</div></div><span class="sev med">MED</span></div>
+          <div class="region-card"><div><div class="name">North Bihar</div><div class="type">Flood watch · IMD</div></div><span class="sev med">MED</span></div>
+          <div class="region-card"><div><div class="name">Coastal Odisha</div><div class="type">Storm surge advisory</div></div><span class="sev high">HIGH</span></div>
+        </div>
+        <div class="risk-note" style="padding:0 14px 16px;">All entries trace to <span class="chip official">IMD official bulletins</span></div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>Disaster Manager View</h2>
+        <div class="persona">Persona: disaster manager / govt. stakeholder</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Aggregates currently active official alerts across regions into one scannable list — same alerting backend as the general chat, a different lens on top of it.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>The PS explicitly names disaster managers and government agencies as served users — this is the concrete UI proof that persona is actually built for, not just claimed in a slide.</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>Today this kind of view means manually checking several regional bulletins. This consolidates them, transparently sourced, in one place.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>The team has no real access to how an actual disaster manager works day to day — this is our <b>least user-validated</b> screen, built on a reasonable guess rather than real workflow research.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORICAL -->
+  <div class="panel" id="panel-hist">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar"><div class="app-title-row"><span class="app-title">Trends &amp; Baselines</span><div class="icon-btn">📊</div></div></div>
+        <div class="filter-row">
+          <span class="pill on">Rainfall</span><span class="pill">Temperature</span><span class="pill">Humidity</span><span class="pill">Sonipat</span><span class="pill">Last 10 yrs</span>
+        </div>
+        <div class="chart-box">
+          <svg viewBox="0 0 300 130">
+            <polyline points="0,90 30,70 60,85 90,50 120,60 150,30 180,45 210,20 240,35 270,15 300,25" fill="none" stroke="#2E9484" stroke-width="2.5"/>
+            <polyline points="0,100 30,95 60,92 90,85 120,80 150,72 180,68 210,60 240,55 270,50 300,48" fill="none" stroke="#8393AF" stroke-width="2" stroke-dasharray="4 3"/>
+          </svg>
+          <div class="chart-legend"><span><span class="sw" style="background:#2E9484"></span>This season</span><span><span class="sw" style="background:#8393AF"></span>10-yr baseline</span></div>
+        </div>
+        <div class="risk-note" style="padding:0 14px 16px;">Illustrative trend — real chart pulls from the preloaded historical dataset.</div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>Historical Analytics</h2>
+        <div class="persona">Persona: farmer + general analyst · secondary view</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Filterable charts and trend lines over the preloaded historical dataset — rainfall, temperature, humidity, by location and date range.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>Makes the PS's "climate trend analysis" feature genuinely explorable, and is what feeds the Crop Risk Index's baseline-deviation term on the Farmer screen.</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>Most consumer weather apps don't expose historical trend exploration at all — this makes the data visually interactive instead of requiring the LLM to describe it in prose.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>Purely exploratory — it doesn't drive a decision on its own the way the Risk Index does. <b>Easiest screen to simplify</b> if time gets tight.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OFFLINE -->
+  <div class="panel" id="panel-offline">
+    <div class="split">
+      <div class="phone-wrap"><div class="phone"><div class="notch"></div><div class="screen">
+        <div class="app-topbar">
+          <div class="app-title-row"><span class="app-title">WeatherGPT</span><div class="signal-badge">📶 Weak signal</div></div>
+          <div class="pill-row"><span class="pill on">📍 Sonipat</span></div>
+        </div>
+        <div class="offline-banner">⚠ You're offline — showing data synced <b>6h ago</b>. New questions will send once reconnected.</div>
+        <div class="chat-area">
+          <div class="bubble user">today's forecast?</div>
+          <div class="bubble bot">27°C, light rain likely this evening.<div class="sub"><span class="chip hist">Offline responder · cached, synced 6h ago</span></div></div>
+          <div class="bubble user">any active alerts?</div>
+          <div class="bubble bot">No active warnings for Sonipat as of last sync.<div class="sub"><span class="chip hist">Offline responder · cached, synced 6h ago</span></div></div>
+          <div class="bubble user">will aphids be a problem this week?</div>
+          <div class="bubble bot queued">⏳ Queued — this needs a live answer. Will send automatically once you're back online.<div class="sub"><span class="chip fallback">Background Sync · queued</span></div></div>
+        </div>
+        <div class="input-bar" style="opacity:.6;"><input placeholder="Offline — simple questions still work" disabled><div class="mic">🎙</div></div>
+      </div></div></div>
+
+      <div class="annotate">
+        <h2>Offline Mode</h2>
+        <div class="persona">Applies across every screen · connectivity layer</div>
+        <div class="spec does"><span class="tag">DOES</span><p>Cache-first app shell (opens instantly on weak signal), cached profile/forecast/alerts in local storage, a template-based <b>offline responder</b> answering common questions with no network at all, and Background Sync queuing anything that genuinely needs the live LLM.</p></div>
+        <div class="spec why"><span class="tag">WHY IT EXISTS</span><p>Rural connectivity is mostly intermittent 2G/3G, not a clean online/offline switch — this is the honest, buildable answer to that reality, and it's the PS's own "rural accessibility" language made concrete.</p></div>
+        <div class="spec better"><span class="tag">BETTER THAN EXISTING TOOLS</span><p>A generic chatbot app fails outright with no connection. Most weather apps show a blank error. This stays genuinely useful for the common questions, and never pretends to answer something it can't.</p></div>
+        <div class="spec limit"><span class="tag">WHERE IT HONESTLY LACKS</span><p>This is <b>not</b> true internet independence — a live LLM call always needs a network round trip eventually. We're claiming graceful degradation, not magic. For zero-smartphone users, only a demo-mockup SMS channel exists, not live infrastructure (see Roadmap).</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div class="panel" id="panel-roadmap">
+    <div class="annotate" style="padding:30px 34px;">
+      <h2 style="margin-bottom:6px;">What the extra time buys us</h2>
+      <div class="persona" style="margin-bottom:26px;">Beyond the 5 core screens — ordered by how much it actually strengthens the pitch, not by how easy it is</div>
+      <div class="roadmap-list">
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier strong">Strengthens the core pitch</span></div>
+          <h3>Wider, region-specific crop rule table</h3>
+          <p>Beyond the 8 crops — the same crop's advisory can genuinely differ by state. Deepens the flagship differentiator directly rather than adding a new surface.</p>
+        </div>
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier strong">Strengthens the core pitch</span></div>
+          <h3>Real feedback from an actual farmer or KVK/extension contact</h3>
+          <p>Almost no competing team will have this. Even one informal conversation validating the crop rule table turns "we assumed" into "we verified" in the pitch.</p>
+        </div>
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier moderate">Genuine but secondary</span></div>
+          <h3>A third/fourth language, done properly</h3>
+          <p>Real value for accessibility, but it's breadth on the baseline layer — it doesn't change whether judges see this as "just a chatbot."</p>
+        </div>
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier moderate">Genuine but secondary</span></div>
+          <h3>Exportable summary reports in the Disaster Manager view</h3>
+          <p>A believable, cheap addition to the persona view — reuses data already being aggregated, no new backend logic.</p>
+        </div>
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier explore">Worth exploring, not promising</span></div>
+          <h3>A tiny on-device model for Layer-3 offline answers</h3>
+          <p>A small in-browser model (e.g. via WebLLM) could in principle answer basic queries with truly zero network. Real research risk in a 12-day window — flag it as future work in the pitch rather than committing engineering time to it now.</p>
+        </div>
+        <div class="rm-item">
+          <div class="rm-head"><span class="rm-tier explore">Worth exploring, not promising</span></div>
+          <h3>SMS query/response channel</h3>
+          <p>The only channel that reaches a user with no smartphone at all. Real sending isn't free at volume, so keep this as a demo-only mockup of the flow, not live infrastructure — mentioning it as designed-for-but-intentionally-not-built is a stronger, more honest signal than building a fragile version.</p>
+        </div>
+      </div>
+      <div class="footer-note" style="margin-top:26px;">The throughline across this whole list: everything that <b>deepens Farmer Advisory or the connectivity story</b> is worth real time. Everything that just adds breadth to the general chat layer is not — that's the difference between standing out and building a nicer version of what every other team will also submit.</div>
+    </div>
+  </div>
+
+  <div class="footer-note">This is a visual mockup for team alignment, not the built product — every number, chart, and alert shown here is illustrative sample data.</div>
+</div>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

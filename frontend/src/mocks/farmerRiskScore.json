@@ -1,0 +1,12 @@
+{
+  "crop": "wheat",
+  "risk_score": 62,
+  "risk_level": "moderate",
+  "components": {
+    "disease_suitability": 0.72,
+    "extreme_weather_proximity": 0.4,
+    "historical_baseline_deviation": 0.18
+  },
+  "baseline_note": "+18 vs 10-yr average for this date",
+  "data_tier": "historical_baseline"
+}
