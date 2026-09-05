@@ -1,0 +1,21 @@
+{
+  "alerts": [
+    {
+      "region": "Tamil Nadu Coast",
+      "hazard_type": "cyclone",
+      "severity": "high",
+      "valid_until": "2026-09-06T18:00:00",
+      "source": "IMD",
+      "historical_context": "6 comparable events in the last decade"
+    },
+    {
+      "region": "South Delhi NCR",
+      "hazard_type": "heavy_rainfall",
+      "severity": "high",
+      "valid_until": "2026-09-05T20:00:00",
+      "source": "IMD",
+      "historical_context": "3 comparable events in the last decade"
+    }
+  ],
+  "count": 14
+}
