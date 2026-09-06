@@ -92,3 +92,31 @@ def test_healthy_response_is_parsed(mock_get):
     assert result["humidity"] == 55
     assert result["feels_like"] == 33.2
     assert result["wind_speed"] == 8.5
+
+
+def test_extract_hourly_forecast_parses_next_hours():
+    raw = {
+        "time": ["2026-09-06T09:00", "2026-09-06T10:00"],
+        "temperature_2m": [28.0, 29.0],
+        "weathercode": [2, 61],
+        "precipitation_probability": [30, None],
+    }
+
+    result = open_meteo.extract_hourly_forecast(raw, hours=2)
+
+    assert len(result) == 2
+    assert result[0] == {
+        "time": "2026-09-06T09:00",
+        "temp": 28.0,
+        "condition": "partly cloudy",
+        "precipitation_chance": 0.3,
+    }
+    # A null precip in one hour must not break the row.
+    assert result[1]["precipitation_chance"] is None
+    assert result[1]["condition"] == "slight rain"
+
+
+def test_extract_hourly_forecast_missing_data_returns_empty():
+    # Source failed soft (_raw_hourly is None) — no crash, just an empty list.
+    assert open_meteo.extract_hourly_forecast(None) == []
+    assert open_meteo.extract_hourly_forecast({}) == []
