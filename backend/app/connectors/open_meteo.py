@@ -24,6 +24,37 @@ WEATHER_CODE_MAP = {
 }
 
 
+def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8) -> list[dict]:
+    """
+    Turn Open-Meteo's raw hourly arrays (the `_raw_hourly` kept on fetch_forecast's
+    result) into a clean forecast list of the next `hours` entries.
+
+    Lives here because this module owns the raw hourly shape and the
+    WEATHER_CODE_MAP. Returns [] if raw_hourly is missing (source failed soft),
+    so callers never crash on an outage — same fail-soft principle as everywhere.
+    """
+    if not raw_hourly:
+        return []
+
+    times = raw_hourly.get("time", [])
+    temps = raw_hourly.get("temperature_2m", [])
+    codes = raw_hourly.get("weathercode", [])
+    precs = raw_hourly.get("precipitation_probability", [])
+
+    forecast = []
+    for i in range(min(hours, len(times))):
+        precip = precs[i] if i < len(precs) else None
+        forecast.append({
+            "time": times[i],
+            "temp": temps[i] if i < len(temps) else None,
+            "condition": (
+                WEATHER_CODE_MAP.get(codes[i], "unknown") if i < len(codes) else "unknown"
+            ),
+            "precipitation_chance": precip / 100 if precip is not None else None,
+        })
+    return forecast
+
+
 def _unavailable_record() -> dict:
     """
     Soft-failure record: the source could not be reached or parsed.
