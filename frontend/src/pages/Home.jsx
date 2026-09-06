@@ -5,7 +5,11 @@ import RecommendationCard from '../components/RecommendationCard'
 import HourlyForecast from '../components/HourlyForecast'
 import WeatherGPTCard from '../components/WeatherGPTCard'
 import FloatingChatButton from '../components/FloatingChatButton'
-import { homeWeather } from '../data/homeWeather'
+// Current conditions: a contract-faithful sample of the /weather record.
+import homeWeather from '../mocks/homeWeather.json'
+// Not-yet-contract-backed extras (hourly strip, recommendation) — clearly
+// separated so the swap to real endpoints stays one-for-one. See the file.
+import { hourlyForecast, recommendation } from '../data/homePlaceholders'
 
 function Home() {
   const [chatOpen, setChatOpen] = useState(false)
@@ -17,8 +21,8 @@ function Home() {
 
         <section className="home-content">
           <WeatherPostcard weather={homeWeather} />
-          <RecommendationCard recommendation={homeWeather.recommendation} />
-          <HourlyForecast forecast={homeWeather.hourlyForecast} />
+          <RecommendationCard recommendation={recommendation} />
+          <HourlyForecast forecast={hourlyForecast} />
           <WeatherGPTCard onOpenChat={() => setChatOpen(true)} />
         </section>
       </div>

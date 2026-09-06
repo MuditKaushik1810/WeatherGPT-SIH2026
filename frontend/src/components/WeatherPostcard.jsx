@@ -1,4 +1,18 @@
+import ProvenanceChip from './ProvenanceChip'
+
+// Show a metric value with its unit, or an em dash when it's null. The contract
+// allows any metric to be null when its source is unavailable (see CLAUDE.md),
+// so the UI must tolerate that rather than render "null%".
+function show(value, unit = '') {
+  return value == null ? '—' : `${value}${unit}`
+}
+
 function WeatherPostcard({ weather }) {
+  const rain =
+    weather.precipitation_chance == null
+      ? '—'
+      : `${Math.round(weather.precipitation_chance * 100)}%`
+
   return (
     <section className="weather-postcard">
       <div className="postcard-artwork" aria-label="City postcard artwork placeholder">
@@ -14,11 +28,13 @@ function WeatherPostcard({ weather }) {
       </div>
 
       <div className="postcard-info">
+        <ProvenanceChip source={weather.source} dataTier={weather.data_tier} />
+
         <div className="temperature-row">
           <div>
-            <div className="temperature">{weather.temperature}°C</div>
-            <div className="condition">{weather.condition}</div>
-            <div className="feels-like">Feels like {weather.feelsLike}°C</div>
+            <div className="temperature">{show(weather.temp, '°C')}</div>
+            <div className="condition">{weather.condition ?? 'Unavailable'}</div>
+            <div className="feels-like">Feels like {show(weather.feels_like, '°C')}</div>
           </div>
         </div>
 
@@ -26,7 +42,7 @@ function WeatherPostcard({ weather }) {
           <div className="metric">
             <span className="metric-icon">💧</span>
             <div>
-              <strong>{weather.humidity}%</strong>
+              <strong>{show(weather.humidity, '%')}</strong>
               <span>Humidity</span>
             </div>
           </div>
@@ -34,7 +50,7 @@ function WeatherPostcard({ weather }) {
           <div className="metric">
             <span className="metric-icon">🌧</span>
             <div>
-              <strong>{weather.rainChance}%</strong>
+              <strong>{rain}</strong>
               <span>Rain</span>
             </div>
           </div>
@@ -42,7 +58,7 @@ function WeatherPostcard({ weather }) {
           <div className="metric">
             <span className="metric-icon">💨</span>
             <div>
-              <strong>{weather.windSpeed} km/h</strong>
+              <strong>{show(weather.wind_speed, ' km/h')}</strong>
               <span>Wind</span>
             </div>
           </div>
@@ -50,7 +66,7 @@ function WeatherPostcard({ weather }) {
           <div className="metric">
             <span className="metric-icon">◌</span>
             <div>
-              <strong>{weather.aqi}</strong>
+              <strong>{show(weather.aqi)}</strong>
               <span>AQI</span>
             </div>
           </div>

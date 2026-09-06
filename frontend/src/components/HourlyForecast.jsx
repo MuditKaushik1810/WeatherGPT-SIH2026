@@ -18,7 +18,7 @@ function HourlyForecast({ forecast }) {
             <div className="forecast-icon">
               {getWeatherIcon(item.condition) || <span className="icon-placeholder">○</span>}
             </div>
-            <strong>{item.temperature}°</strong>
+            <strong>{item.temp}°</strong>
           </div>
         ))}
 
