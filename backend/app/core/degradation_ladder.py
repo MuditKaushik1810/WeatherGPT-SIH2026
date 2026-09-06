@@ -38,5 +38,10 @@ def get_weather(location_name: str) -> dict:
     imd_data = imd.fetch_warnings(location_name)
 
     result = normalize.normalize_weather_record(location_name, om_data, imd_data)
-    cache.set(cache_key, result)
+
+    # Don't cache a transient source outage — otherwise a brief Open-Meteo blip
+    # gets served stale for the full TTL even after the source recovers. (Same
+    # reason the unresolved_location gap above is returned without caching.)
+    if result["data_tier"] != "source_unavailable":
+        cache.set(cache_key, result)
     return result

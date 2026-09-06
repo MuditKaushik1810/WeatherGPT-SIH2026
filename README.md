@@ -34,7 +34,8 @@ the shapes in Section 3.10) so frontend work is fully decoupled from backend pro
 ## Current status
 
 Sprint 1 scaffold: static geocoding table (seed set of ~40 cities — expand
-toward ~500), Open-Meteo connector (working), IMD connector (stub — needs real
+toward ~500), Open-Meteo connector (working, fails soft — degrades instead of
+crashing when the source is unreachable), IMD connector (stub — needs real
 scraping/parsing implemented), degradation ladder (working, tested), in-memory
 cache, normalization to the shared data shape. See the Architecture doc for
 what's next.
