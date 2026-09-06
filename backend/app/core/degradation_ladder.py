@@ -6,7 +6,7 @@ something usable is found, and every result is tagged with data_tier so the
 grounding assembler (Sprint 2) and every UI provenance chip know exactly how
 confident/specific the answer is.
 """
-from app.connectors import imd, open_meteo
+from app.connectors import imd, open_meteo, open_meteo_air_quality
 from app.core import cache, geocoding, normalize
 
 
@@ -24,6 +24,10 @@ def get_weather(location_name: str) -> dict:
             "temp": None,
             "condition": None,
             "precipitation_chance": None,
+            "humidity": None,
+            "feels_like": None,
+            "wind_speed": None,
+            "aqi": None,
             "warnings": [],
             "source": None,
             "data_tier": "unresolved_location",
@@ -36,8 +40,9 @@ def get_weather(location_name: str) -> dict:
 
     om_data = open_meteo.fetch_forecast(coords["lat"], coords["lon"])
     imd_data = imd.fetch_warnings(location_name)
+    aq_data = open_meteo_air_quality.fetch_air_quality(coords["lat"], coords["lon"])
 
-    result = normalize.normalize_weather_record(location_name, om_data, imd_data)
+    result = normalize.normalize_weather_record(location_name, om_data, imd_data, aq_data)
 
     # Don't cache a transient source outage — otherwise a brief Open-Meteo blip
     # gets served stale for the full TTL even after the source recovers. (Same
