@@ -228,6 +228,56 @@ button:focus-visible {
   margin-top: 9px;
   font-size: 19px;
   font-weight: 700;
+  /* Backend condition strings are lowercase ("partly cloudy"); present them
+     title-cased without transforming the underlying data. */
+  text-transform: capitalize;
+}
+
+/* Provenance chip — source + data_tier, the app-wide grounding affordance. */
+.provenance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  padding: 5px 12px 5px 9px;
+  border-radius: 99px;
+  background: #edf4e9;
+  color: #3c5a44;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.provenance-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #57895f;
+}
+
+/* Tier accents: green = exact (base above), amber = estimated, grey = no data. */
+.provenance-regional_fallback,
+.provenance-historical_baseline {
+  background: #f6efd8;
+  color: #7a6321;
+}
+
+.provenance-regional_fallback .provenance-dot,
+.provenance-historical_baseline .provenance-dot {
+  background: #c39a2b;
+}
+
+.provenance-source_unavailable,
+.provenance-unresolved_location,
+.provenance-unknown {
+  background: #ecedea;
+  color: #6a716a;
+}
+
+.provenance-source_unavailable .provenance-dot,
+.provenance-unresolved_location .provenance-dot,
+.provenance-unknown .provenance-dot {
+  background: #9aa29a;
 }
 
 .feels-like {
