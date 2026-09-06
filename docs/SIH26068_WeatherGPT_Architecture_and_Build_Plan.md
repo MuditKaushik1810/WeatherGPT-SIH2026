@@ -452,6 +452,27 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 
 **Lock this section before Sprint 1's real logic starts.** Changing a field name or type later is "shape drift" — it should be a visible, deliberate PR everyone sees, never a silent change inside one branch.
 
+`GET /weather/{location}` — current-conditions record (the normalized shape from CLAUDE.md's data contract; the Home screen's `current` block reads this)
+```json
+{ "location": "Noida, Uttar Pradesh", "temp": 28.4, "condition": "partly cloudy",
+  "precipitation_chance": 0.3, "humidity": 72, "feels_like": 31.0, "wind_speed": 12.0,
+  "aqi": 86, "warnings": [], "source": "Open-Meteo", "data_tier": "exact",
+  "fetched_at": "2026-09-06T09:11:33Z" }
+```
+
+`GET /home/{location}` — composite Home-screen view: current + hourly + a rule-based recommendation, in one response
+```json
+{ "location": "Noida, Uttar Pradesh",
+  "current": { "temp": 28.4, "condition": "partly cloudy", "data_tier": "exact", "source": "Open-Meteo" },
+  "hourly": [
+    { "time": "2026-09-06T09:00", "temp": 28.4, "condition": "partly cloudy", "precipitation_chance": 0.3 }
+  ],
+  "recommendation": { "title": "Good time for a short outing",
+    "message": "Conditions look comfortable right now — a good time to be outdoors." },
+  "data_tier": "exact" }
+```
+(`current` is abbreviated above — it carries the full `GET /weather` record. `hourly` is `[]` and `recommendation` degrades to an honest "limited data" message when live sources are unavailable — never a bare refusal.)
+
 `POST /chat`
 ```json
 // Request
