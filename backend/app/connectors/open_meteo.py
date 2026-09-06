@@ -37,6 +37,8 @@ def _unavailable_record() -> dict:
     return {
         "temp": None,
         "humidity": None,
+        "feels_like": None,
+        "wind_speed": None,
         "precipitation_chance": None,
         "condition": None,
         "source": "Open-Meteo",
@@ -63,7 +65,7 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") 
     params = {
         "latitude": lat,
         "longitude": lon,
-        "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,weathercode",
+        "hourly": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weathercode,wind_speed_10m",
         "timezone": timezone_name,
         "forecast_days": 7,
     }
@@ -84,6 +86,8 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") 
         return {
             "temp": hourly["temperature_2m"][now_index],
             "humidity": hourly["relative_humidity_2m"][now_index],
+            "feels_like": hourly["apparent_temperature"][now_index],
+            "wind_speed": hourly["wind_speed_10m"][now_index],
             "precipitation_chance": precip_chance,
             "condition": WEATHER_CODE_MAP.get(weather_code, "unknown"),
             "source": "Open-Meteo",
