@@ -1,0 +1,87 @@
+"""
+Open-Meteo connector tests — all external calls mocked (CLAUDE.md: never hit
+live IMD/Open-Meteo endpoints from the test suite).
+
+The point of these tests is the fail-soft contract: a dead, rate-limited, or
+schema-changed source must return an "unavailable" record, never raise up to
+the degradation ladder.
+"""
+from unittest.mock import patch
+
+import requests
+
+from app.connectors import open_meteo
+
+
+@patch("app.connectors.open_meteo.requests.get")
+def test_network_error_returns_unavailable_not_exception(mock_get):
+    mock_get.side_effect = requests.exceptions.ConnectionError("network down")
+
+    result = open_meteo.fetch_forecast(28.6, 77.2)
+
+    assert result["data_tier"] == "unavailable"
+    assert result["temp"] is None
+    assert result["source"] == "Open-Meteo"
+
+
+@patch("app.connectors.open_meteo.requests.get")
+def test_http_error_returns_unavailable(mock_get):
+    # e.g. a 429 rate-limit or 500 from Open-Meteo.
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError("429")
+
+    result = open_meteo.fetch_forecast(28.6, 77.2)
+
+    assert result["data_tier"] == "unavailable"
+    assert result["temp"] is None
+
+
+@patch("app.connectors.open_meteo.requests.get")
+def test_malformed_payload_returns_unavailable(mock_get):
+    # Source reachable but its JSON shape changed — no "hourly" key.
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = {"unexpected": "shape"}
+
+    result = open_meteo.fetch_forecast(28.6, 77.2)
+
+    assert result["data_tier"] == "unavailable"
+
+
+@patch("app.connectors.open_meteo.requests.get")
+def test_null_precipitation_still_returns_a_forecast(mock_get):
+    # A missing precip value must not cost us the whole otherwise-valid record.
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = {
+        "hourly": {
+            "temperature_2m": [27.0],
+            "relative_humidity_2m": [80],
+            "precipitation_probability": [None],
+            "weathercode": [61],
+        }
+    }
+
+    result = open_meteo.fetch_forecast(28.6, 77.2)
+
+    assert result["data_tier"] == "exact"
+    assert result["temp"] == 27.0
+    assert result["precipitation_chance"] is None
+    assert result["condition"] == "slight rain"
+
+
+@patch("app.connectors.open_meteo.requests.get")
+def test_healthy_response_is_parsed(mock_get):
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = {
+        "hourly": {
+            "temperature_2m": [30.5],
+            "relative_humidity_2m": [55],
+            "precipitation_probability": [40],
+            "weathercode": [2],
+        }
+    }
+
+    result = open_meteo.fetch_forecast(28.6, 77.2)
+
+    assert result["data_tier"] == "exact"
+    assert result["temp"] == 30.5
+    assert result["precipitation_chance"] == 0.4
+    assert result["condition"] == "partly cloudy"

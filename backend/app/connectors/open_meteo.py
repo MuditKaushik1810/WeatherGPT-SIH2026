@@ -24,9 +24,35 @@ WEATHER_CODE_MAP = {
 }
 
 
+def _unavailable_record() -> dict:
+    """
+    Soft-failure record: the source could not be reached or parsed.
+
+    Mirrors the imd.py fail-soft contract exactly — a connector NEVER raises
+    up to the degradation ladder (CLAUDE.md, "Connectors must fail soft,
+    always"). data_tier="unavailable" tells the normalizer/ladder to degrade
+    to the next tier instead of crashing the whole pipeline over one dead
+    source.
+    """
+    return {
+        "temp": None,
+        "humidity": None,
+        "precipitation_chance": None,
+        "condition": None,
+        "source": "Open-Meteo",
+        "data_tier": "unavailable",
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "_raw_hourly": None,
+    }
+
+
 def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") -> dict:
     """
     Fetch current + 7-day hourly forecast for a coordinate.
+
+    Fails soft: on any network error, non-2xx response, or unexpected payload
+    shape, returns an "unavailable" record (see _unavailable_record) rather
+    than raising — the degradation ladder depends on this never crashing.
 
     IMPORTANT: always pass timezone explicitly. Open-Meteo does not
     auto-detect local timezone from coordinates — it defaults to whatever was
@@ -41,24 +67,34 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") 
         "timezone": timezone_name,
         "forecast_days": 7,
     }
-    response = requests.get(OPEN_METEO_URL, params=params, timeout=10)
-    response.raise_for_status()
-    data = response.json()
+    try:
+        response = requests.get(OPEN_METEO_URL, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-    hourly = data["hourly"]
-    now_index = 0  # first hourly entry is the nearest hour to "now"
-    weather_code = hourly["weathercode"][now_index]
+        hourly = data["hourly"]
+        now_index = 0  # first hourly entry is the nearest hour to "now"
+        weather_code = hourly["weathercode"][now_index]
 
-    return {
-        "temp": hourly["temperature_2m"][now_index],
-        "humidity": hourly["relative_humidity_2m"][now_index],
-        "precipitation_chance": hourly["precipitation_probability"][now_index] / 100,
-        "condition": WEATHER_CODE_MAP.get(weather_code, "unknown"),
-        "source": "Open-Meteo",
-        "data_tier": "exact",
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-        # Full hourly series kept for callers that need more than the current
-        # hour (e.g. the Trip Planner, or the Disease Suitability Model's
-        # 24h rolling average) — not part of the normalized shape itself.
-        "_raw_hourly": hourly,
-    }
+        # precipitation_probability is nullable in Open-Meteo's hourly series;
+        # a missing value must not cost us the whole (otherwise valid) record.
+        precip_raw = hourly["precipitation_probability"][now_index]
+        precip_chance = precip_raw / 100 if precip_raw is not None else None
+
+        return {
+            "temp": hourly["temperature_2m"][now_index],
+            "humidity": hourly["relative_humidity_2m"][now_index],
+            "precipitation_chance": precip_chance,
+            "condition": WEATHER_CODE_MAP.get(weather_code, "unknown"),
+            "source": "Open-Meteo",
+            "data_tier": "exact",
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            # Full hourly series kept for callers that need more than the
+            # current hour (e.g. the Trip Planner, or the Disease Suitability
+            # Model's 24h rolling average) — not part of the normalized shape.
+            "_raw_hourly": hourly,
+        }
+    except Exception:
+        # Fail soft, always. A dead / rate-limited / changed source must
+        # degrade the ladder to the next tier, never crash it. See docstring.
+        return _unavailable_record()
