@@ -54,8 +54,10 @@ def test_null_precipitation_still_returns_a_forecast(mock_get):
         "hourly": {
             "temperature_2m": [27.0],
             "relative_humidity_2m": [80],
+            "apparent_temperature": [29.0],
             "precipitation_probability": [None],
             "weathercode": [61],
+            "wind_speed_10m": [12.0],
         }
     }
 
@@ -74,8 +76,10 @@ def test_healthy_response_is_parsed(mock_get):
         "hourly": {
             "temperature_2m": [30.5],
             "relative_humidity_2m": [55],
+            "apparent_temperature": [33.2],
             "precipitation_probability": [40],
             "weathercode": [2],
+            "wind_speed_10m": [8.5],
         }
     }
 
@@ -85,3 +89,6 @@ def test_healthy_response_is_parsed(mock_get):
     assert result["temp"] == 30.5
     assert result["precipitation_chance"] == 0.4
     assert result["condition"] == "partly cloudy"
+    assert result["humidity"] == 55
+    assert result["feels_like"] == 33.2
+    assert result["wind_speed"] == 8.5
