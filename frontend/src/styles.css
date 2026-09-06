@@ -213,95 +213,66 @@ button:focus-visible {
   font-size: 10px;
 }
 
-.postcard-info {
-  padding: 22px 22px 24px;
+.postcard-weather {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 28px;
+  background: linear-gradient(90deg, rgba(255, 253, 248, 0.76) 0%, rgba(255, 253, 248, 0.38) 48%, rgba(255, 253, 248, 0.08) 100%);
+}
+
+.postcard-weather .provenance-chip {
+  margin-bottom: 12px;
+  background: rgba(255, 253, 248, 0.78);
+  backdrop-filter: blur(4px);
 }
 
 .temperature {
-  font-size: clamp(52px, 10vw, 70px);
-  line-height: 0.92;
+  font-size: clamp(58px, 12vw, 78px);
+  line-height: 0.9;
   letter-spacing: -3px;
   font-weight: 800;
+  color: #203128;
+  text-shadow: 0 1px 8px rgba(255, 253, 248, 0.45);
 }
 
 .condition {
-  margin-top: 9px;
-  font-size: 19px;
-  font-weight: 700;
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 750;
+  color: #294635;
   /* Backend condition strings are lowercase ("partly cloudy"); present them
      title-cased without transforming the underlying data. */
   text-transform: capitalize;
 }
 
-/* Provenance chip — source + data_tier, the app-wide grounding affordance. */
-.provenance-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 14px;
-  padding: 5px 12px 5px 9px;
-  border-radius: 99px;
-  background: #edf4e9;
-  color: #3c5a44;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-.provenance-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #57895f;
-}
-
-/* Tier accents: green = exact (base above), amber = estimated, grey = no data. */
-.provenance-regional_fallback,
-.provenance-historical_baseline {
-  background: #f6efd8;
-  color: #7a6321;
-}
-
-.provenance-regional_fallback .provenance-dot,
-.provenance-historical_baseline .provenance-dot {
-  background: #c39a2b;
-}
-
-.provenance-source_unavailable,
-.provenance-unresolved_location,
-.provenance-unknown {
-  background: #ecedea;
-  color: #6a716a;
-}
-
-.provenance-source_unavailable .provenance-dot,
-.provenance-unresolved_location .provenance-dot,
-.provenance-unknown .provenance-dot {
-  background: #9aa29a;
-}
-
 .feels-like {
-  margin-top: 4px;
-  color: #77827b;
-  font-size: 13px;
+  margin-top: 5px;
+  color: #5f6d63;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .weather-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  margin-top: 23px;
+  padding: 20px 24px 22px;
+  background: #fffdf8;
 }
 
 .metric {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
 }
 
 .metric-icon {
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .metric strong,
@@ -310,13 +281,16 @@ button:focus-visible {
 }
 
 .metric strong {
-  font-size: 13px;
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 800;
 }
 
 .metric div span {
-  margin-top: 2px;
+  margin-top: 4px;
   color: #78847c;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .recommendation-card,
@@ -545,6 +519,18 @@ button:focus-visible {
   }
 
   .postcard-artwork {
-    min-height: 210px;
+    min-height: 225px;
+  }
+
+  .postcard-weather {
+    padding: 20px 22px;
+  }
+
+  .temperature {
+    font-size: 58px;
+  }
+
+  .weather-metrics {
+    padding: 18px 20px 20px;
   }
 }
