@@ -531,6 +531,14 @@ This is the piece that makes frontend and backend work genuinely independent (Se
   "emergency_mode": true, "source": "NDMA" }
 ```
 
+`GET /disaster/rescue-facilities/{location}` — **planned** (the frontend Disaster tab renders this today from a mock; no backend yet — see Section 8 backlog). Nearby emergency-support facilities — explicitly NOT designated relief camps.
+```json
+{ "facilities": [
+    { "name": "Police Station — Sector 20", "type": "police_station",
+      "address": "Noida, Uttar Pradesh", "distance_km": 2.1, "source": "Google Places" } ] }
+```
+(The demo mock deliberately omits `data_tier` on its placeholder entries so fake facilities are never shown as `"exact"`; a real listing endpoint may carry its own `data_tier`/`source`.)
+
 `GET /historical/trends`
 ```json
 { "location": "Sonipat", "variable": "rainfall",
@@ -709,6 +717,46 @@ With 12–13 days instead of 36 hours, the team shouldn't need harsh cuts — bu
 - [ ] Demo video (backup for live-demo risk)
 - [ ] Presentation deck covering: differentiation argument (Section 2.1), scoped solution, architecture, live demo, scoping-decision rationale, evaluation-criteria mapping
 - [ ] Test query set rehearsed multiple times against the deployed (not local) build, including farmer-advisory, trip-planning, and disaster-view queries
+
+---
+
+## 8. Implementation Status & Backlog (living)
+
+This section tracks what has actually been built versus the plan above, and — most importantly — every feature that currently exists only as UI or scaffolding and still needs backend work, so nothing is silently left as a front-end-only shell. Update it as work lands; it is the bridge between this plan and the current codebase. (Sections 1–7 describe the intended design; this section describes reality.)
+
+### 8.1 Built so far — including work that extends the original plan
+
+**Sprint 1 data foundation (as planned):** static geocoding table + Nominatim fallback; Open-Meteo forecast connector (fail-soft); IMD warnings connector (stub, fail-soft); the degradation ladder; normalization to the shared record; short-TTL in-memory cache; `pytest` + GitHub Actions CI (backend).
+
+**Additive — built but not strictly in the original plan (record it here so the doc stays honest):**
+- **Open-Meteo Air Quality connector** — a *separate* API from the forecast one, added to supply `aqi`. Returns the **US-AQI** scale, not India's CPCB scale (labelled honestly). Fails soft like every connector.
+- **Extra current-conditions metrics** — `humidity`, `feels_like`, `wind_speed` added to the normalized data contract (additive; also in CLAUDE.md).
+- **`source_unavailable` data_tier** — a new tier for "location resolved, but the live source is down," distinct from `unresolved_location`. Transient outages are not cached.
+- **`GET /home/{location}` composite endpoint** — returns current conditions + hourly forecast + a recommendation in one response (Section 3.10). Reuses the degradation ladder's fetch/normalize.
+- **Rule-based recommendation engine** (`recommendation.py`) — deterministic, safety-first (active warning → extreme temp → poor AQI → rain → comfortable), never bare-refuses. This is the general-purpose analogue of the curated farmer/disaster advisories; it was not in the Section 3.2 component table.
+- **CORS** on the API (origins configurable via `FRONTEND_ORIGINS`) so the browser frontend can call it.
+- **Frontend:** Home tab (weather postcard, provenance chip reading `source`/`data_tier`, hourly strip, recommendation), Disaster tab (active / no-alert states, alert-details / rescue-centers / emergency-numbers / demo-SOS panels), a shared `BottomNav` with hash-based routing, and contract-faithful mocks in `frontend/src/mocks/`.
+
+### 8.2 Backlog — UI or scaffolding that still needs a backend
+
+The "don't let it stay a UI-only feature" list. Each row has a working front end today; the right-hand column is the backend still owed.
+
+| Feature (UI exists) | Current state | Backend still owed |
+|---|---|---|
+| Home current conditions | mock JSON | wire to live `GET /home` (PR-D, in progress) |
+| Location entry / selection | none yet (was hardcoded) | a location input; **persistence: `localStorage` now → saved locations in Postgres** once user profiles exist |
+| Disaster alerts list | mock `/disaster/alerts` shape | live IMD-backed `GET /disaster/alerts` |
+| Disaster alert details + safety guidance | a hardcoded generic advice line in the UI | **NDMA-sourced Hazard Safety Guide** (`GET /disaster/safety-guide`, Section 3.9) — hazard-specific, curated, cited |
+| Rescue facilities | demo mock (no `data_tier`) | real `GET /disaster/rescue-facilities/{location}` (e.g. Google Places) |
+| SEND SOS | demo-only; contacts no one, says so | real dispatch flow — likely **stays a demo** per the zero-cost constraint (Section 3.5); if built, needs a delivery channel |
+| Travel tab | placeholder screen | Trip Planner API (`POST /trip-plan`, Section 3.10) |
+| Recommendation | rule-based (shipped) | optional Sprint-2 upgrade to the grounded-LLM advisory |
+
+### 8.3 Engineering gaps to close
+
+- **Frontend test suite** — there are no frontend tests today. Add Vitest + React Testing Library (component + fetch-state tests).
+- **Frontend CI** — CI currently runs backend `pytest` only; it does not build or test the frontend, so a broken frontend passes checks. Add `npm ci && npm run build` (and the tests above) to CI. This gap has already let frontend-only issues reach review.
+- **Deployment** — a single deployed instance (Render/Railway, per Section 2) is still to be stood up.
 
 ---
 
