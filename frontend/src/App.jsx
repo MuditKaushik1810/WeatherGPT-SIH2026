@@ -1,22 +1,11 @@
 import { useEffect, useState } from 'react'
 import Home from './pages/Home'
+import Travel from './pages/Travel'
 import Disaster from './pages/Disaster'
 
 function getPageFromHash() {
   const page = window.location.hash.replace('#', '').split('?')[0]
   return ['home', 'travel', 'disaster'].includes(page) ? page : 'home'
-}
-
-function TravelPlaceholder() {
-  return (
-    <main className="app-shell">
-      <div className="travel-placeholder">
-        <h1>Travel</h1>
-        <p>Travel Planner is the next frontend tab.</p>
-        <p>This placeholder keeps the shared navigation wired without inventing a Travel API.</p>
-      </div>
-    </main>
-  )
 }
 
 function App() {
@@ -29,7 +18,7 @@ function App() {
   }, [])
 
   if (page === 'disaster') return <Disaster />
-  if (page === 'travel') return <TravelPlaceholder />
+  if (page === 'travel') return <Travel />
   return <Home />
 }
 
