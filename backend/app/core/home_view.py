@@ -39,11 +39,14 @@ def get_home_view(location_name: str) -> dict:
     om_data, imd_data, aq_data = degradation_ladder.fetch_sources(coords, location_name)
     current = normalize.normalize_weather_record(location_name, om_data, imd_data, aq_data)
 
+    raw_hourly = om_data.get("_raw_hourly")
     view = {
         "location": location_name,
         "current": current,
-        "hourly": open_meteo.extract_hourly_forecast(om_data.get("_raw_hourly")),
-        "recommendation": recommendation.build_recommendation(current),
+        "hourly": open_meteo.extract_hourly_forecast(raw_hourly),
+        "recommendation": recommendation.build_recommendation(
+            current, open_meteo.summarize_today(raw_hourly)
+        ),
         "data_tier": current["data_tier"],
     }
 

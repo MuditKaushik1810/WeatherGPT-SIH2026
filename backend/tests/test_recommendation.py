@@ -47,3 +47,37 @@ def test_moderate_aqi():
 
 def test_comfortable_default():
     assert build_recommendation(_record())["title"] == "Good time for a short outing"
+
+
+# --- broadened rules: today's peaks + feels-like / humidity / wind ---
+
+def test_peak_heat_later_today_beats_mild_now():
+    # Mild right now (28°C), but today peaks at 41°C — safety looks ahead.
+    r = build_recommendation(_record(temp=28), today={"peak_temp": 41})
+    assert r["title"] == "Beat the heat"
+
+
+def test_peak_feels_like_triggers_heat():
+    r = build_recommendation(_record(temp=30), today={"peak_feels_like": 46})
+    assert r["title"] == "Beat the heat"
+
+
+def test_low_temp_today_triggers_bundle_up():
+    r = build_recommendation(_record(temp=18), today={"low_temp": 4})
+    assert r["title"] == "Bundle up"
+
+
+def test_strong_wind():
+    r = build_recommendation(_record(), today={"max_wind": 46})
+    assert r["title"] == "Expect strong winds"
+
+
+def test_muggy_uses_humidity_and_feels_like():
+    r = build_recommendation(_record(humidity=88, feels_like=34))
+    assert r["title"] == "Muggy out"
+
+
+def test_falls_back_to_current_when_no_today_summary():
+    # today=None -> safety rules use the current reading; comfortable stays default.
+    assert build_recommendation(_record())["title"] == "Good time for a short outing"
+    assert build_recommendation(_record(temp=41))["title"] == "Beat the heat"
