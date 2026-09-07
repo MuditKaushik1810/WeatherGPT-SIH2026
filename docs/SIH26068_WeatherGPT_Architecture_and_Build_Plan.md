@@ -754,10 +754,9 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 
 ### 8.3 Engineering gaps to close
 
-- **Current conditions anchored to 00:00, not the current hour** *(bug, found during the recommendation PR)* — the Open-Meteo forecast and air-quality connectors treat `hourly[0]` (midnight, local) as "now," so the Home screen's current temp/AQI and the hourly strip's "Now" show midnight's values rather than the actual time. Fix in a dedicated connector PR: select the hourly index matching the current hour, or use Open-Meteo's `current=` parameters. (The recommendation engine's day-peak logic is unaffected — it scans the whole calendar day.)
 - **Deployment** — a single deployed instance (Render/Railway, per Section 2) is still to be stood up.
 
-*(Closed since first drafted: the frontend test suite (Vitest + React Testing Library) and the frontend CI job — `npm ci` → build → test.)*
+*(Closed since first drafted: the frontend test suite (Vitest + React Testing Library); the frontend CI job — `npm ci` → build → test; and the "current conditions anchored to 00:00" bug — the connectors now read the current-hour index via `open_meteo.current_hour_index`, so current temp/AQI and the hourly strip's "Now" reflect the actual hour.)*
 
 ---
 
