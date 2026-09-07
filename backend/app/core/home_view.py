@@ -40,10 +40,12 @@ def get_home_view(location_name: str) -> dict:
     current = normalize.normalize_weather_record(location_name, om_data, imd_data, aq_data)
 
     raw_hourly = om_data.get("_raw_hourly")
+    # Start the hourly strip at the current hour, not midnight (index 0).
+    hourly_start = open_meteo.current_hour_index(raw_hourly.get("time", []) if raw_hourly else [])
     view = {
         "location": location_name,
         "current": current,
-        "hourly": open_meteo.extract_hourly_forecast(raw_hourly),
+        "hourly": open_meteo.extract_hourly_forecast(raw_hourly, start=hourly_start),
         "recommendation": recommendation.build_recommendation(
             current, open_meteo.summarize_today(raw_hourly)
         ),
