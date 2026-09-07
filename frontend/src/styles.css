@@ -104,6 +104,63 @@ button:focus-visible {
   gap: 18px;
 }
 
+.location-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.location-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid #d8ddd2;
+  border-radius: 13px;
+  background: #fffdf8;
+  font: inherit;
+  color: #203128;
+}
+
+.location-input:focus-visible {
+  outline: 3px solid rgba(53, 113, 73, 0.35);
+  outline-offset: 1px;
+}
+
+.location-go {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 13px;
+  padding: 11px 18px;
+  background: #426b4c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-hint,
+.home-status {
+  margin: 6px 2px;
+  color: #5f6d63;
+  font-size: 14px;
+}
+
+.home-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8ece9;
+  color: #7a3a30;
+}
+
+.home-error p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .weather-postcard {
   overflow: hidden;
   border-radius: 30px;

@@ -733,7 +733,7 @@ This section tracks what has actually been built versus the plan above, and — 
 - **Extra current-conditions metrics** — `humidity`, `feels_like`, `wind_speed` added to the normalized data contract (additive; also in CLAUDE.md).
 - **`source_unavailable` data_tier** — a new tier for "location resolved, but the live source is down," distinct from `unresolved_location`. Transient outages are not cached.
 - **`GET /home/{location}` composite endpoint** — returns current conditions + hourly forecast + a recommendation in one response (Section 3.10). Reuses the degradation ladder's fetch/normalize.
-- **Rule-based recommendation engine** (`recommendation.py`) — deterministic, safety-first (active warning → extreme temp → poor AQI → rain → comfortable), never bare-refuses. This is the general-purpose analogue of the curated farmer/disaster advisories; it was not in the Section 3.2 component table.
+- **Rule-based recommendation engine** (`recommendation.py`) — deterministic, safety-first, never bare-refuses. Priority: active warning → today's peak heat / feels-like → today's low (cold) → poor AQI → strong wind → high rain → moderate AQI → muggy (humidity + feels-like) → otherwise comfortable. The safety rules look ahead to the **day's forecast extremes** (`open_meteo.summarize_today`), not just the current hour. The general-purpose analogue of the curated farmer/disaster advisories; not in the Section 3.2 component table.
 - **CORS** on the API (origins configurable via `FRONTEND_ORIGINS`) so the browser frontend can call it.
 - **Frontend:** Home tab (weather postcard, provenance chip reading `source`/`data_tier`, hourly strip, recommendation), Disaster tab (active / no-alert states, alert-details / rescue-centers / emergency-numbers / demo-SOS panels), a shared `BottomNav` with hash-based routing, and contract-faithful mocks in `frontend/src/mocks/`.
 
@@ -754,9 +754,9 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 
 ### 8.3 Engineering gaps to close
 
-- **Frontend test suite** — there are no frontend tests today. Add Vitest + React Testing Library (component + fetch-state tests).
-- **Frontend CI** — CI currently runs backend `pytest` only; it does not build or test the frontend, so a broken frontend passes checks. Add `npm ci && npm run build` (and the tests above) to CI. This gap has already let frontend-only issues reach review.
 - **Deployment** — a single deployed instance (Render/Railway, per Section 2) is still to be stood up.
+
+*(Closed since first drafted: the frontend test suite (Vitest + React Testing Library); the frontend CI job — `npm ci` → build → test; and the "current conditions anchored to 00:00" bug — the connectors now read the current-hour index via `open_meteo.current_hour_index`, so current temp/AQI and the hourly strip's "Now" reflect the actual hour.)*
 
 ---
 
