@@ -19,7 +19,7 @@ This document exists to answer one question per feature: **is this worth the tim
 | 6 | Trend Engine | Flagship (shared) | Flagship | Medium | 3 |
 | 7 | Disaster Manager View | Disaster mgmt. | Secondary | Low | 4 |
 | 8 | Disaster Safety Guidance + Emergency Mode | Disaster mgmt. | Secondary–Flagship* | Medium | 4 |
-| 9 | Trip Planner | Secondary | Secondary | Low–Medium | 3 |
+| 9 | Trip Planner (route-aware stop planner) | Secondary | Secondary | Medium | 3 |
 | 10 | Historical Analytics Dashboard | Secondary | Secondary | Low | 5 |
 | 11 | Personalized Daily Digest | Secondary | Secondary | Low | 4 |
 | 12 | PWA + Connectivity Layer | Accessibility | Core** | Medium | 4 |
@@ -99,7 +99,7 @@ This document exists to answer one question per feature: **is this worth the tim
 
 **What it is:** A shared component computing a multi-year baseline (moving average) and trend direction (simple linear regression) per location/variable from the preloaded historical dataset, plus an anomaly detector comparing the current season against it.
 
-**Why it's worth building:** This is what makes historical data genuinely useful rather than decorative. The advisory logic activates specifically when the current-season anomaly and the multi-year trend agree — e.g., below-average early rainfall *and* a 10-year trend toward later monsoon onset together justify a real recommendation, not either signal alone. It also demonstrates good software design: one well-built component serving three features (the Risk Index's baseline term, the Trip Planner's far-future estimate, and a standalone Trend-Informed Advisory query) rather than three separate implementations.
+**Why it's worth building:** This is what makes historical data genuinely useful rather than decorative. The advisory logic activates specifically when the current-season anomaly and the multi-year trend agree — e.g., below-average early rainfall *and* a 10-year trend toward later monsoon onset together justify a real recommendation, not either signal alone. It also demonstrates good software design: one well-built component serving two features (the Risk Index's baseline term and a standalone Trend-Informed Advisory query) rather than separate implementations.
 
 **Feasibility:** Medium effort, low technical risk — `numpy.polyfit` and a moving average are basic statistics, not a modeling project. The main cost is making sure the preloaded historical dataset (Sprint 1) has enough years of coverage per location to make a trend meaningful, not just a baseline.
 
@@ -135,13 +135,13 @@ This document exists to answer one question per feature: **is this worth the tim
 
 ### 9. Trip Planner
 
-**What it is:** Handles queries like "planning a week trip to Manali, help me prepare," synthesizing a day-by-day note across the whole trip rather than forcing seven separate lookups, and honestly routing between the live forecast (within ~10–16 days) and the historical baseline (beyond it) with explicit labeling of which kind of data each day's answer uses.
+**What it is:** A **route-aware trip planner**. The user enters an origin and destination; the system geocodes both, routes between them, and lays out the journey as a sequence of stops/checkpoints — each **rated** (good / use caution / not recommended) from the forecast at its ETA, and annotated with **nearby facilities** (restaurants, fuel, hotels, hospitals, parking). A horizontal timeline shows the whole route at a glance. *(The Travel tab UI is already built and merged; this is the shipped scope, replacing the earlier "day-by-day itinerary note" framing.)*
 
-**Why it's worth building:** It demonstrates the system reasoning across a time range in one coherent answer — a genuinely different interaction shape from "what's the weather." The honest forecast-horizon routing is also a small, concrete trust signal: the system doesn't quietly guess past where real forecasting ends.
+**Why it's worth building:** It turns "weather for a trip" into an *actionable route plan* — where to stop, which stretch has rain, what's around each stop — which neither a generic weather app nor a chatbot does. A genuinely different interaction shape and a strong visual demo.
 
-**Feasibility:** Low-to-medium effort — mostly a prompt-design and data-routing exercise on top of infrastructure already built in Sprints 1 and 3 (the Trend Engine supplies the far-future path). A good task for whoever finishes their Sprint 2 work early.
+**Feasibility:** Medium. The frontend (Travel tab) exists. The backend combines **Geoapify** (geocoding + routing + Places for facilities; free tier ~3k/day, **needs an API key**) with **Open-Meteo** (weather at each checkpoint's ETA). This is the project's first *keyed* external API — it adds a `GEOAPIFY_API_KEY` secret and a real free-tier rate limit to design around.
 
-**Honest limitation:** Closer to "smart formatting of existing data" than genuinely novel logic — a real feature, but the lightest-weight one among the differentiated features, and first to trim if time runs short.
+**Honest limitation:** Facility counts and route detail are only as good as Geoapify's free tier, and its rate limit constrains how many routes/checkpoints can be evaluated per day. An interactive route map is a future stretch — the current UI is a checkpoint timeline, not a rendered map.
 
 ---
 
