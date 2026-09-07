@@ -55,6 +55,60 @@ def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8) -> list[dic
     return forecast
 
 
+def summarize_today(raw_hourly: dict | None) -> dict:
+    """
+    Compute today's forecast extremes from Open-Meteo's raw hourly arrays, over
+    the hours that share the calendar date of the first entry (Open-Meteo returns
+    the hourly series in local time starting at 00:00, so this is "calendar
+    today"). The recommendation engine uses these so safety advice can look
+    ahead to the day's peak, not just the current hour.
+
+    Returns {peak_temp, low_temp, peak_feels_like, max_precip_chance, max_wind},
+    each None when its series is missing. All-None when raw_hourly is missing
+    (source failed soft) — never raises.
+    """
+    empty = {
+        "peak_temp": None,
+        "low_temp": None,
+        "peak_feels_like": None,
+        "max_precip_chance": None,
+        "max_wind": None,
+    }
+    if not raw_hourly:
+        return empty
+
+    times = raw_hourly.get("time", [])
+    if not times:
+        return empty
+
+    today = times[0][:10]  # calendar date of the first entry (YYYY-MM-DD)
+    temp_arr = raw_hourly.get("temperature_2m", [])
+    feels_arr = raw_hourly.get("apparent_temperature", [])
+    prec_arr = raw_hourly.get("precipitation_probability", [])
+    wind_arr = raw_hourly.get("wind_speed_10m", [])
+
+    temps, feels, precs, winds = [], [], [], []
+    for i, when in enumerate(times):
+        if when[:10] != today:
+            break  # series is chronological; once past today, stop
+        if i < len(temp_arr) and temp_arr[i] is not None:
+            temps.append(temp_arr[i])
+        if i < len(feels_arr) and feels_arr[i] is not None:
+            feels.append(feels_arr[i])
+        if i < len(prec_arr) and prec_arr[i] is not None:
+            precs.append(prec_arr[i])
+        if i < len(wind_arr) and wind_arr[i] is not None:
+            winds.append(wind_arr[i])
+
+    return {
+        "peak_temp": max(temps) if temps else None,
+        "low_temp": min(temps) if temps else None,
+        "peak_feels_like": max(feels) if feels else None,
+        "max_precip_chance": max(precs) / 100 if precs else None,
+        "max_wind": max(winds) if winds else None,
+    }
+
+
 def _unavailable_record() -> dict:
     """
     Soft-failure record: the source could not be reached or parsed.

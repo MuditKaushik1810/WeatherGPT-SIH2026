@@ -87,3 +87,27 @@ def test_home_view_unresolved_location_is_honest_gap(mock_resolve):
     assert view["current"]["temp"] is None
     # Still a recommendation, never a bare refusal.
     assert view["recommendation"]["title"]
+
+
+@patch("app.core.degradation_ladder.open_meteo_air_quality.fetch_air_quality")
+@patch("app.core.degradation_ladder.imd.fetch_warnings")
+@patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
+def test_home_view_recommendation_uses_today_peak(mock_forecast, mock_warnings, mock_aqi):
+    # Mild right now (30°C), but hot later today (41°C) -> peak drives "Beat the heat".
+    forecast = _forecast()
+    forecast["temp"] = 30.0
+    forecast["_raw_hourly"] = {
+        "time": ["2026-09-06T09:00", "2026-09-06T15:00"],
+        "temperature_2m": [30.0, 41.0],
+        "apparent_temperature": [33.0, 44.0],
+        "weathercode": [2, 0],
+        "precipitation_probability": [10, 5],
+        "wind_speed_10m": [8.0, 10.0],
+    }
+    mock_forecast.return_value = forecast
+    mock_warnings.return_value = _warnings()
+    mock_aqi.return_value = _aqi()
+
+    view = home_view.get_home_view("Delhi")
+
+    assert view["recommendation"]["title"] == "Beat the heat"

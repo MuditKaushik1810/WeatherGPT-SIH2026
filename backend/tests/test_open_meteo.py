@@ -120,3 +120,34 @@ def test_extract_hourly_forecast_missing_data_returns_empty():
     # Source failed soft (_raw_hourly is None) — no crash, just an empty list.
     assert open_meteo.extract_hourly_forecast(None) == []
     assert open_meteo.extract_hourly_forecast({}) == []
+
+
+def test_summarize_today_computes_extremes_for_today_only():
+    raw = {
+        "time": ["2026-09-07T00:00", "2026-09-07T12:00", "2026-09-07T23:00", "2026-09-08T00:00"],
+        "temperature_2m": [22.0, 41.0, 26.0, 5.0],
+        "apparent_temperature": [24.0, 45.0, 28.0, 6.0],
+        "precipitation_probability": [10, 70, 20, 90],
+        "wind_speed_10m": [8.0, 30.0, 12.0, 55.0],
+    }
+
+    summary = open_meteo.summarize_today(raw)
+
+    assert summary["peak_temp"] == 41.0
+    assert summary["low_temp"] == 22.0          # tomorrow's 5.0 excluded
+    assert summary["peak_feels_like"] == 45.0
+    assert summary["max_precip_chance"] == 0.7  # tomorrow's 90% excluded
+    assert summary["max_wind"] == 30.0          # tomorrow's 55 excluded
+
+
+def test_summarize_today_is_none_safe():
+    assert open_meteo.summarize_today(None)["peak_temp"] is None
+
+    partial = open_meteo.summarize_today({
+        "time": ["2026-09-07T00:00", "2026-09-07T01:00"],
+        "temperature_2m": [20.0, 21.0],
+    })
+    assert partial["peak_temp"] == 21.0
+    assert partial["peak_feels_like"] is None
+    assert partial["max_wind"] is None
+    assert partial["max_precip_chance"] is None
