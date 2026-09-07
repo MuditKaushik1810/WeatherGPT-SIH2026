@@ -208,7 +208,7 @@ function Disaster() {
     () => disasterAlerts.alerts.filter((alert) => alert.region.toLowerCase().includes('delhi') || alert.region.toLowerCase().includes('noida')),
     [],
   )
-  const demoActiveAlert = new URLSearchParams(window.location.search).get('state') === 'active'
+  const demoActiveAlert = new URLSearchParams(window.location.hash.split('?')[1] || '').get('state') === 'active'
     ? disasterActiveAlert.alerts[0]
     : null
   const activeAlert = demoActiveAlert ?? locationAlerts.find(isActive)
