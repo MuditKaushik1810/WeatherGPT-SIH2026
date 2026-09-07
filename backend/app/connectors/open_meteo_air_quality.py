@@ -22,6 +22,10 @@ from datetime import datetime, timezone
 
 import requests
 
+# Reuse the forecast connector's "which hourly index is now" helper — both APIs
+# return their hourly series starting at 00:00 local, so index 0 is midnight.
+from app.connectors.open_meteo import current_hour_index
+
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
 
@@ -38,7 +42,7 @@ def _unavailable_record() -> dict:
     }
 
 
-def fetch_air_quality(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") -> dict:
+def fetch_air_quality(lat: float, lon: float, timezone_name: str = "Asia/Kolkata", now=None) -> dict:
     """
     Fetch the current US AQI for a coordinate.
 
@@ -66,8 +70,10 @@ def fetch_air_quality(lat: float, lon: float, timezone_name: str = "Asia/Kolkata
         response.raise_for_status()
         data = response.json()
 
-        now_index = 0  # first hourly entry is the nearest hour to "now"
-        aqi = data["hourly"]["us_aqi"][now_index]
+        hourly = data["hourly"]
+        # index 0 is 00:00 local, not "now" — read the actual current hour.
+        now_index = current_hour_index(hourly.get("time", []), timezone_name, now)
+        aqi = hourly["us_aqi"][now_index]
         return {
             "aqi": aqi,
             "source": "Open-Meteo Air Quality",
