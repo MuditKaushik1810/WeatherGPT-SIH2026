@@ -280,8 +280,7 @@ function Travel() {
             </div>
 
             <p className="travel-source-note">
-              Demo values only · Source: {travelPlan.source} · Data tier:{' '}
-              {travelPlan.data_tier}
+              Demo values only · Weather via Open-Meteo · Routing &amp; facilities via Geoapify (planned)
             </p>
           </section>
         </section>
