@@ -3,7 +3,7 @@ import Home from './pages/Home'
 import Disaster from './pages/Disaster'
 
 function getPageFromHash() {
-  const page = window.location.hash.replace('#', '')
+  const page = window.location.hash.replace('#', '').split('?')[0]
   return ['home', 'travel', 'disaster'].includes(page) ? page : 'home'
 }
 
