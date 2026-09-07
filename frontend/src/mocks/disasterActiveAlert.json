@@ -1,0 +1,13 @@
+{
+  "alerts": [
+    {
+      "region": "Noida, Uttar Pradesh",
+      "hazard_type": "heavy_rainfall",
+      "severity": "high",
+      "valid_until": "2026-09-06T20:00:00",
+      "source": "IMD",
+      "historical_context": "Illustrative UI fixture \u2014 replace with live official alert data"
+    }
+  ],
+  "count": 1
+}

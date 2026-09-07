@@ -5,6 +5,7 @@ import RecommendationCard from '../components/RecommendationCard'
 import HourlyForecast from '../components/HourlyForecast'
 import WeatherGPTCard from '../components/WeatherGPTCard'
 import FloatingChatButton from '../components/FloatingChatButton'
+import BottomNav from '../components/BottomNav'
 // Current conditions: a contract-faithful sample of the /weather record.
 import homeWeather from '../mocks/homeWeather.json'
 // Not-yet-contract-backed extras (hourly strip, recommendation) — clearly
@@ -26,6 +27,8 @@ function Home() {
           <WeatherGPTCard onOpenChat={() => setChatOpen(true)} />
         </section>
       </div>
+
+      <BottomNav active="home" />
 
       <FloatingChatButton
         onClick={() => setChatOpen(true)}
