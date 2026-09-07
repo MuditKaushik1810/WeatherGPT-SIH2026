@@ -747,7 +747,7 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 | Location entry / selection | none yet (was hardcoded) | a location input; **persistence: `localStorage` now → saved locations in Postgres** once user profiles exist |
 | Disaster alerts list | mock `/disaster/alerts` shape | live IMD-backed `GET /disaster/alerts` |
 | Disaster alert details + safety guidance | a hardcoded generic advice line in the UI | **NDMA-sourced Hazard Safety Guide** (`GET /disaster/safety-guide`, Section 3.9) — hazard-specific, curated, cited |
-| Rescue facilities | demo mock (no `data_tier`) | real `GET /disaster/rescue-facilities` (e.g. Google Places) |
+| Rescue facilities | demo mock (no `data_tier`) | real `GET /disaster/rescue-facilities/{location}` (e.g. Google Places) |
 | SEND SOS | demo-only; contacts no one, says so | real dispatch flow — likely **stays a demo** per the zero-cost constraint (Section 3.5); if built, needs a delivery channel |
 | Travel tab | placeholder screen | Trip Planner API (`POST /trip-plan`, Section 3.10) |
 | Recommendation | rule-based (shipped) | optional Sprint-2 upgrade to the grounded-LLM advisory |
