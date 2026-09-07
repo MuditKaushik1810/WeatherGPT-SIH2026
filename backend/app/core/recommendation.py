@@ -1,34 +1,53 @@
 """
 Rule-based "Today's Recommendation" for the Home screen.
 
-A transparent, deterministic suggestion derived from the current weather record
-— NO LLM. Priority is safety-first: an active official warning outranks every
-comfort factor. Everything is grounded in the fetched record, never invented.
+A transparent, deterministic suggestion — NO LLM. Priority is safety-first: an
+active official warning outranks every comfort factor. Everything is grounded in
+the fetched record, never invented.
 
-On the thresholds:
-  - The AQI bands follow the US EPA AQI categories (>150 "unhealthy",
-    101-150 "unhealthy for sensitive groups"), which is the scale our AQI
-    source (Open-Meteo `us_aqi`) reports.
-  - The temperature and rain thresholds are general comfort heuristics, tunable,
-    and deliberately conservative.
+Two inputs:
+  - `record`: the current normalized weather record (temp/aqi/humidity/feels_like
+    /wind/precip/warnings).
+  - `today`: today's forecast extremes from open_meteo.summarize_today
+    (peak_temp/low_temp/peak_feels_like/max_precip_chance/max_wind). The SAFETY
+    rules look ahead to these (a 41°C peak later today should say "beat the heat"
+    even if it's mild right now); the comfort/default case uses current readings.
+    When `today` is absent, safety rules fall back to the current reading.
+
+On the thresholds (all heuristic and tunable):
+  - AQI bands follow the US EPA AQI categories (>150 "unhealthy", 101-150
+    "unhealthy for sensitive groups") — the scale our AQI source reports.
+  - Temperature, feels-like, wind, rain and humidity thresholds are general
+    comfort/safety heuristics, deliberately conservative.
 
 This is a GENERAL comfort-level suggestion, not an authoritative advisory. The
-sourced/curated advisories in this product are the Farmer Advisory (ICAR/GKMS)
-and Disaster Safety (NDMA) features — those are held to a stricter bar than this.
+sourced/curated advisories (Farmer Advisory — ICAR/GKMS; Disaster Safety — NDMA)
+are held to a stricter bar than this.
 """
 
 
-def build_recommendation(record: dict) -> dict:
+def build_recommendation(record: dict, today: dict | None = None) -> dict:
     """
-    Return a {title, message} suggestion derived from a normalized weather record.
+    Return a {title, message} suggestion from the current record and today's
+    forecast extremes. Never bare-refuses: with no usable data it returns an
+    honest "limited data" message rather than nothing.
+    """
+    today = today or {}
 
-    Never bare-refuses: if the record has no usable data (source unavailable),
-    it returns an honest "limited data" message rather than nothing.
-    """
     temp = record.get("temp")
     aqi = record.get("aqi")
     precip = record.get("precipitation_chance")
+    humidity = record.get("humidity")
+    feels_like = record.get("feels_like")
     warnings = record.get("warnings") or []
+
+    # Safety rules use today's extremes, falling back to the current reading when
+    # the forecast series isn't available (e.g. source failed soft).
+    peak_temp = _coalesce(today.get("peak_temp"), temp)
+    low_temp = _coalesce(today.get("low_temp"), temp)
+    peak_feels = _coalesce(today.get("peak_feels_like"), feels_like)
+    max_precip = _coalesce(today.get("max_precip_chance"), precip)
+    max_wind = _coalesce(today.get("max_wind"), record.get("wind_speed"))
 
     if warnings:
         return {
@@ -48,19 +67,19 @@ def build_recommendation(record: dict) -> dict:
             ),
         }
 
-    if temp is not None and temp >= 40:
+    if (peak_temp is not None and peak_temp >= 40) or (peak_feels is not None and peak_feels >= 45):
         return {
             "title": "Beat the heat",
             "message": (
-                "It's very hot — stay hydrated and avoid direct sun between "
-                "noon and 3 PM."
+                "It gets very hot today — stay hydrated and avoid direct sun "
+                "between noon and 3 PM."
             ),
         }
 
-    if temp is not None and temp <= 5:
+    if low_temp is not None and low_temp <= 5:
         return {
             "title": "Bundle up",
-            "message": "Cold conditions — dress in warm layers before heading out.",
+            "message": "Cold conditions today — dress in warm layers before heading out.",
         }
 
     if aqi is not None and aqi > 150:
@@ -72,12 +91,21 @@ def build_recommendation(record: dict) -> dict:
             ),
         }
 
-    if precip is not None and precip >= 0.6:
+    if max_wind is not None and max_wind >= 40:
+        return {
+            "title": "Expect strong winds",
+            "message": (
+                f"Strong winds are likely today (up to {round(max_wind)} km/h) — "
+                "secure loose objects and take care on two-wheelers."
+            ),
+        }
+
+    if max_precip is not None and max_precip >= 0.6:
         return {
             "title": "Carry an umbrella",
             "message": (
-                f"Rain is likely ({round(precip * 100)}% chance) — keep an "
-                "umbrella handy if you're heading out."
+                f"Rain is likely today ({round(max_precip * 100)}% chance) — keep "
+                "an umbrella handy if you're heading out."
             ),
         }
 
@@ -90,10 +118,24 @@ def build_recommendation(record: dict) -> dict:
             ),
         }
 
+    if humidity is not None and humidity >= 80 and feels_like is not None and feels_like >= 32:
+        return {
+            "title": "Muggy out",
+            "message": (
+                f"It's muggy right now ({round(humidity)}% humidity, feels like "
+                f"{round(feels_like)}°C) — stay hydrated and take it slow."
+            ),
+        }
+
     return {
         "title": "Good time for a short outing",
         "message": (
-            "Conditions look comfortable right now — a good time to be outdoors. "
+            "Conditions look comfortable today — a good time to be outdoors. "
             "Keep an eye on the sky if you'll be out a while."
         ),
     }
+
+
+def _coalesce(preferred, fallback):
+    """Return `preferred` unless it's None, in which case `fallback`."""
+    return fallback if preferred is None else preferred
