@@ -27,16 +27,33 @@ or `http://localhost:8000/docs` for the auto-generated API docs.
 
 ## Quick start — frontend
 
-Not yet scaffolded — Sprint 1, Day 1 task. Recommended: `npm create vite@latest frontend -- --template react`,
-then build every screen against the mock JSON in `frontend/src/mocks/` (matching
-the shapes in Section 3.10) so frontend work is fully decoupled from backend progress.
+```bash
+cd frontend
+npm install
+npm run dev      # Vite dev server (usually http://localhost:5173)
+npm test         # Vitest suite
+npm run build    # production build
+```
+
+Set `VITE_API_BASE_URL` (see `frontend/.env.example`) to point at the backend;
+it defaults to `http://localhost:8000`. On the Home screen, enter a location and
+it fetches live weather from the backend's `/home/{location}` endpoint.
 
 ## Current status
 
-Sprint 1 scaffold: static geocoding table (seed set of ~40 cities — expand
-toward ~500), Open-Meteo forecast connector (working, fails soft — degrades
-instead of crashing when the source is unreachable; now also returns humidity,
-feels-like, and wind), Open-Meteo Air Quality connector (working, fails soft —
-US AQI scale, not India CPCB), IMD connector (stub — needs real scraping/parsing
-implemented), degradation ladder (working, tested), in-memory cache,
-normalization to the shared data shape. See the Architecture doc for what's next.
+**Sprint 1 (foundation) — largely complete.** Backend: static geocoding table
+(+ Nominatim fallback), Open-Meteo forecast connector and a separate Open-Meteo
+Air Quality connector (both fail-soft; current conditions read the actual current
+hour), the degradation ladder, normalization to the shared data shape, and a
+short-TTL cache — all covered by a `pytest` suite in CI. Endpoints:
+`/weather/{location}` and the composite `/home/{location}` (current + hourly + a
+rule-based recommendation), with CORS for the browser frontend. Frontend
+(React + Vite): a live-wired **Home** tab (location entry, remembered via
+localStorage, loading/error states), a **Disaster** tab, and a **Travel Planner**
+tab, with a Vitest suite in CI. Deploy config (`render.yaml` +
+`docs/DEPLOYMENT.md`) is ready.
+
+Still open in Sprint 1: a deployed instance, the preloaded historical dataset,
+expanding the geocoding table (~40 → ~500), and a real IMD warnings connector
+(currently a fail-soft stub). See the Architecture doc, Section 8, for the full
+status and backlog.
