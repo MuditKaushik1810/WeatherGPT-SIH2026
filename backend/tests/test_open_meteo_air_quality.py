@@ -6,7 +6,9 @@ Same fail-soft contract as the other connectors: a dead / rate-limited /
 schema-changed source must return an "unavailable" record with aqi=None, never
 raise up to the degradation ladder.
 """
+from datetime import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -55,3 +57,19 @@ def test_healthy_response_parses_aqi(mock_get):
     assert result["data_tier"] == "exact"
     assert result["aqi"] == 86
     assert result["source"] == "Open-Meteo Air Quality"
+
+
+@patch("app.connectors.open_meteo_air_quality.requests.get")
+def test_reads_current_hour_aqi_not_midnight(mock_get):
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = {
+        "hourly": {
+            "time": ["2026-09-07T00:00", "2026-09-07T20:00"],
+            "us_aqi": [40, 130],
+        }
+    }
+    now = datetime(2026, 9, 7, 20, 5, tzinfo=ZoneInfo("Asia/Kolkata"))
+
+    result = open_meteo_air_quality.fetch_air_quality(28.6, 77.2, now=now)
+
+    assert result["aqi"] == 130  # 20:00 entry, not midnight's 40

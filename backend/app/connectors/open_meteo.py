@@ -6,6 +6,7 @@ Grid-based means this always returns a value for any Indian coordinate — there
 is no "no data for this village" case here (see Architecture doc, Section 3.4).
 """
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -24,10 +25,35 @@ WEATHER_CODE_MAP = {
 }
 
 
-def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8) -> list[dict]:
+def current_hour_index(times: list[str], timezone_name: str = "Asia/Kolkata", now=None) -> int:
+    """
+    Index of the current local hour within Open-Meteo's hourly `time` array.
+
+    Open-Meteo returns the hourly series starting at 00:00 of the local day, so
+    element 0 is MIDNIGHT, not "now". This finds the entry matching the current
+    hour (floored) in `timezone_name`. Falls back to 0 if `times` is empty or the
+    current hour isn't present — which shouldn't happen for a live forecast,
+    since it always includes every hour of today.
+
+    `now` is injectable for deterministic tests; defaults to the real current time.
+    """
+    if not times:
+        return 0
+    if now is None:
+        now = datetime.now(ZoneInfo(timezone_name))
+    target = now.strftime("%Y-%m-%dT%H:00")
+    try:
+        return times.index(target)
+    except ValueError:
+        return 0
+
+
+def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8, start: int = 0) -> list[dict]:
     """
     Turn Open-Meteo's raw hourly arrays (the `_raw_hourly` kept on fetch_forecast's
-    result) into a clean forecast list of the next `hours` entries.
+    result) into a clean forecast list of `hours` entries starting at index
+    `start` (the caller passes the current-hour index so the strip begins at
+    "now", not midnight).
 
     Lives here because this module owns the raw hourly shape and the
     WEATHER_CODE_MAP. Returns [] if raw_hourly is missing (source failed soft),
@@ -42,7 +68,7 @@ def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8) -> list[dic
     precs = raw_hourly.get("precipitation_probability", [])
 
     forecast = []
-    for i in range(min(hours, len(times))):
+    for i in range(start, min(start + hours, len(times))):
         precip = precs[i] if i < len(precs) else None
         forecast.append({
             "time": times[i],
@@ -53,6 +79,60 @@ def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8) -> list[dic
             "precipitation_chance": precip / 100 if precip is not None else None,
         })
     return forecast
+
+
+def summarize_today(raw_hourly: dict | None) -> dict:
+    """
+    Compute today's forecast extremes from Open-Meteo's raw hourly arrays, over
+    the hours that share the calendar date of the first entry (Open-Meteo returns
+    the hourly series in local time starting at 00:00, so this is "calendar
+    today"). The recommendation engine uses these so safety advice can look
+    ahead to the day's peak, not just the current hour.
+
+    Returns {peak_temp, low_temp, peak_feels_like, max_precip_chance, max_wind},
+    each None when its series is missing. All-None when raw_hourly is missing
+    (source failed soft) — never raises.
+    """
+    empty = {
+        "peak_temp": None,
+        "low_temp": None,
+        "peak_feels_like": None,
+        "max_precip_chance": None,
+        "max_wind": None,
+    }
+    if not raw_hourly:
+        return empty
+
+    times = raw_hourly.get("time", [])
+    if not times:
+        return empty
+
+    today = times[0][:10]  # calendar date of the first entry (YYYY-MM-DD)
+    temp_arr = raw_hourly.get("temperature_2m", [])
+    feels_arr = raw_hourly.get("apparent_temperature", [])
+    prec_arr = raw_hourly.get("precipitation_probability", [])
+    wind_arr = raw_hourly.get("wind_speed_10m", [])
+
+    temps, feels, precs, winds = [], [], [], []
+    for i, when in enumerate(times):
+        if when[:10] != today:
+            break  # series is chronological; once past today, stop
+        if i < len(temp_arr) and temp_arr[i] is not None:
+            temps.append(temp_arr[i])
+        if i < len(feels_arr) and feels_arr[i] is not None:
+            feels.append(feels_arr[i])
+        if i < len(prec_arr) and prec_arr[i] is not None:
+            precs.append(prec_arr[i])
+        if i < len(wind_arr) and wind_arr[i] is not None:
+            winds.append(wind_arr[i])
+
+    return {
+        "peak_temp": max(temps) if temps else None,
+        "low_temp": min(temps) if temps else None,
+        "peak_feels_like": max(feels) if feels else None,
+        "max_precip_chance": max(precs) / 100 if precs else None,
+        "max_wind": max(winds) if winds else None,
+    }
 
 
 def _unavailable_record() -> dict:
@@ -79,7 +159,7 @@ def _unavailable_record() -> dict:
     }
 
 
-def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") -> dict:
+def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata", now=None) -> dict:
     """
     Fetch current + 7-day hourly forecast for a coordinate.
 
@@ -106,7 +186,9 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata") 
         data = response.json()
 
         hourly = data["hourly"]
-        now_index = 0  # first hourly entry is the nearest hour to "now"
+        # Open-Meteo's hourly starts at 00:00 local, so index 0 is midnight, not
+        # "now" — pick the entry for the actual current hour.
+        now_index = current_hour_index(hourly.get("time", []), timezone_name, now)
         weather_code = hourly["weathercode"][now_index]
 
         # precipitation_probability is nullable in Open-Meteo's hourly series;
