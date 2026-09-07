@@ -22,3 +22,12 @@ def test_unknown_place_falls_back_to_nominatim(monkeypatch):
     monkeypatch.setattr(geocoding, "_resolve_via_nominatim", fake_nominatim)
     result = geocoding.resolve_location("SomeVillageNotInTable")
     assert result["resolved_via"] == "nominatim"
+
+
+def test_expanded_table_resolves_many_cities_without_network():
+    # Cities that were NOT in the original ~40-city seed now resolve from the
+    # static table (GeoNames-sourced expansion), including low-population capitals.
+    for city in ["Noida", "Gurugram", "Kota", "Gangtok", "Itanagar", "Leh"]:
+        result = geocoding.resolve_location(city)
+        assert result is not None, city
+        assert result["resolved_via"] == "static_table", city
