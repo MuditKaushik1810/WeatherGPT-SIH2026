@@ -141,7 +141,7 @@ function RescuePanel({ onClose }) {
             <div className="facility-copy">
               <strong>{facility.name}</strong>
               <span>{facility.address}</span>
-              <small>{facility.distance_km} km · {facility.source} · {facility.data_tier}</small>
+              <small>{facility.distance_km} km · {facility.source}</small>
             </div>
           </article>
         ))}

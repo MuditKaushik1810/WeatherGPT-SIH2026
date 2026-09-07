@@ -5,24 +5,21 @@
       "type": "police_station",
       "address": "Noida, Uttar Pradesh",
       "distance_km": 2.1,
-      "source": "Google Maps (planned)",
-      "data_tier": "exact"
+      "source": "Google Maps (planned)"
     },
     {
       "name": "Fire Station — Sector 58 (demo)",
       "type": "fire_station",
       "address": "Noida, Uttar Pradesh",
       "distance_km": 3.4,
-      "source": "Google Maps (planned)",
-      "data_tier": "exact"
+      "source": "Google Maps (planned)"
     },
     {
       "name": "Government Hospital — Sector 30 (demo)",
       "type": "government_hospital",
       "address": "Noida, Uttar Pradesh",
       "distance_km": 4.2,
-      "source": "Google Maps (planned)",
-      "data_tier": "exact"
+      "source": "Google Maps (planned)"
     }
   ]
 }
