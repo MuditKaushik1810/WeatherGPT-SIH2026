@@ -68,17 +68,24 @@ def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8, start: int 
     times = raw_hourly.get("time", [])
     temps = raw_hourly.get("temperature_2m", [])
     codes = raw_hourly.get("weathercode", [])
+    # Some sources (e.g. WeatherAPI) give human-readable condition text directly
+    # rather than a WMO code; prefer it when present, else map the code.
+    texts = raw_hourly.get("condition_text", [])
     precs = raw_hourly.get("precipitation_probability", [])
 
     forecast = []
     for i in range(start, min(start + hours, len(times))):
         precip = precs[i] if i < len(precs) else None
+        if i < len(texts) and texts[i] is not None:
+            condition = texts[i]
+        elif i < len(codes):
+            condition = WEATHER_CODE_MAP.get(codes[i], "unknown")
+        else:
+            condition = "unknown"
         forecast.append({
             "time": times[i],
             "temp": temps[i] if i < len(temps) else None,
-            "condition": (
-                WEATHER_CODE_MAP.get(codes[i], "unknown") if i < len(codes) else "unknown"
-            ),
+            "condition": condition,
             "precipitation_chance": precip / 100 if precip is not None else None,
         })
     return forecast
