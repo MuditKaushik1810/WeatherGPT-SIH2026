@@ -1,6 +1,18 @@
+from datetime import datetime
 from unittest.mock import patch
 
-from app.core import degradation_ladder
+from app.core import degradation_ladder, historical
+
+
+def _source_unavailable_record(location="Delhi", warnings=None, aqi=None):
+    """A normalized record shaped as normalize.py returns when forecast is down."""
+    return {
+        "location": location, "temp": None, "condition": None,
+        "precipitation_chance": None, "humidity": None, "feels_like": None,
+        "wind_speed": None, "aqi": aqi, "warnings": warnings or [],
+        "source": None, "data_tier": "source_unavailable",
+        "fetched_at": "2026-09-06T00:00:00Z", "message": "forecast down",
+    }
 
 
 def _healthy_aqi():
@@ -107,10 +119,13 @@ def test_forecast_source_down_but_warning_active_degrades_not_crashes(mock_forec
 
     result = degradation_ladder.get_weather("Delhi")
 
-    assert result["data_tier"] == "source_unavailable"
-    assert result["temp"] is None
+    # Delhi has a preloaded historical baseline, so the ladder degrades one rung
+    # further than a bare gap: a typical-for-this-date temp tagged
+    # historical_baseline — with the live warning + AQI still surfaced.
+    assert result["data_tier"] == "historical_baseline"
+    assert result["temp"] is not None
+    assert result["source"] == "Historical"
     assert result["warnings"] == ["Cyclone warning - Odisha coast"]
-    assert result["source"] == "IMD"
     # AQI comes from an independent source, so it survives a forecast outage.
     assert result["aqi"] == 42
     assert "message" in result
@@ -131,7 +146,10 @@ def test_all_live_sources_down_never_bare_refuses(mock_forecast, mock_aqi, mock_
 
     result = degradation_ladder.get_weather("Delhi")
 
-    assert result["data_tier"] == "source_unavailable"
+    # Every LIVE source is down, but Delhi's preloaded baseline still gives a
+    # grounded typical-for-today temp — never a bare refusal.
+    assert result["data_tier"] == "historical_baseline"
+    assert result["temp"] is not None
     assert result["warnings"] == []
     assert result["aqi"] is None
     assert result["message"]
@@ -149,7 +167,9 @@ def test_transient_source_outage_is_not_cached(mock_forecast, mock_aqi, mock_war
     }
     mock_forecast.return_value = _unavailable_forecast()
     first = degradation_ladder.get_weather("Delhi")
-    assert first["data_tier"] == "source_unavailable"
+    # Delhi's baseline fills the gap — and a historical_baseline fallback is
+    # deliberately NOT cached, which is exactly what lets recovery be seen below.
+    assert first["data_tier"] == "historical_baseline"
 
     # Source recovers on the next call — we must re-fetch, not serve the cached gap.
     mock_forecast.return_value = {
@@ -160,3 +180,31 @@ def test_transient_source_outage_is_not_cached(mock_forecast, mock_aqi, mock_war
     second = degradation_ladder.get_weather("Delhi")
     assert second["data_tier"] == "exact"
     assert second["temp"] == 33.0
+
+
+def test_apply_historical_fallback_fills_gap_with_baseline_for_the_date():
+    # Deterministic: inject the date, expect that day-of-year's baseline temp.
+    now = datetime(2026, 7, 15, 14, 0)  # doy 196
+    expected = historical.get_baseline("Delhi")["clim_temp"][196 - 1]
+
+    record = _source_unavailable_record(location="Delhi", aqi=90)
+    upgraded = degradation_ladder.apply_historical_fallback(record, "Delhi", now=now)
+
+    assert upgraded["data_tier"] == "historical_baseline"
+    assert upgraded["temp"] == expected
+    assert upgraded["source"] == "Historical"
+    assert upgraded["aqi"] == 90          # live AQI preserved
+    assert "typical temperature" in upgraded["message"]
+
+
+def test_apply_historical_fallback_leaves_live_tiers_untouched():
+    live = {"data_tier": "exact", "temp": 31.0, "source": "Open-Meteo"}
+    assert degradation_ladder.apply_historical_fallback(live, "Delhi") is live
+
+
+def test_apply_historical_fallback_stays_gap_when_no_baseline():
+    # A location with no preloaded baseline must stay an honest source_unavailable.
+    record = _source_unavailable_record(location="Nowhere-XYZ-123")
+    result = degradation_ladder.apply_historical_fallback(record, "Nowhere-XYZ-123")
+    assert result["data_tier"] == "source_unavailable"
+    assert result["temp"] is None

@@ -92,6 +92,31 @@ def test_home_view_unresolved_location_is_honest_gap(mock_resolve):
 @patch("app.core.degradation_ladder.open_meteo_air_quality.fetch_air_quality")
 @patch("app.core.degradation_ladder.imd.fetch_warnings")
 @patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
+def test_home_view_forecast_down_degrades_to_historical_baseline(mock_forecast, mock_warnings, mock_aqi):
+    # Live forecast is down for a city with a preloaded baseline (Delhi): the
+    # current block shows a typical-for-today temp tagged historical_baseline
+    # instead of a null current block — and still carries live AQI.
+    mock_forecast.return_value = {
+        "temp": None, "humidity": None, "feels_like": None, "wind_speed": None,
+        "precipitation_chance": None, "condition": None, "source": "Open-Meteo",
+        "data_tier": "unavailable", "fetched_at": "2026-09-06T00:00:00Z", "_raw_hourly": None,
+    }
+    mock_warnings.return_value = _warnings()
+    mock_aqi.return_value = _aqi()
+
+    view = home_view.get_home_view("Delhi")
+
+    assert view["data_tier"] == "historical_baseline"
+    assert view["current"]["data_tier"] == "historical_baseline"
+    assert view["current"]["temp"] is not None
+    assert view["current"]["aqi"] == 86
+    assert view["hourly"] == []                    # no live hourly series to strip
+    assert view["recommendation"]["title"]         # still a grounded suggestion
+
+
+@patch("app.core.degradation_ladder.open_meteo_air_quality.fetch_air_quality")
+@patch("app.core.degradation_ladder.imd.fetch_warnings")
+@patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
 def test_home_view_recommendation_uses_today_peak(mock_forecast, mock_warnings, mock_aqi):
     # Mild right now (30°C), but hot later today (41°C) -> peak drives "Beat the heat".
     forecast = _forecast()
