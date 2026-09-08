@@ -5,10 +5,13 @@ Docs: https://open-meteo.com/en/docs
 Grid-based means this always returns a value for any Indian coordinate — there
 is no "no data for this village" case here (see Architecture doc, Section 3.4).
 """
+import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -211,7 +214,17 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata", 
             # Model's 24h rolling average) — not part of the normalized shape.
             "_raw_hourly": hourly,
         }
-    except Exception:
-        # Fail soft, always. A dead / rate-limited / changed source must
-        # degrade the ladder to the next tier, never crash it. See docstring.
+    except requests.HTTPError as exc:
+        # Non-2xx (e.g. a 429 rate-limit). Surface the status + Open-Meteo's
+        # reason body so a production outage is diagnosable instead of silent,
+        # then still fail soft — degrade the ladder, never crash it.
+        status = exc.response.status_code if exc.response is not None else "?"
+        body = exc.response.text[:300] if exc.response is not None else ""
+        logger.warning("Open-Meteo forecast HTTP %s for (%s, %s): %s", status, lat, lon, body)
+        return _unavailable_record()
+    except Exception as exc:
+        # Any other failure (network down, timeout, changed JSON shape). Log the
+        # reason, then fail soft — a dead source degrades the ladder, never
+        # crashes it. See docstring.
+        logger.warning("Open-Meteo forecast failed for (%s, %s): %r", lat, lon, exc)
         return _unavailable_record()
