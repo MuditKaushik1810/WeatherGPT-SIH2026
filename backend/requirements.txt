@@ -5,3 +5,4 @@ python-dotenv==1.0.1
 tzdata>=2024.1  # ensures ZoneInfo("Asia/Kolkata") works on slim images without system tz data
 pytest==8.3.3
 pytest-mock==3.14.0
+httpx==0.28.1  # required by FastAPI's TestClient (starlette) — used by the test suite
