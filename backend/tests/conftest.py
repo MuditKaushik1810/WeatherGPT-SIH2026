@@ -15,11 +15,12 @@ def clear_cache_between_tests():
 
 
 @pytest.fixture(autouse=True)
-def no_weatherapi_key(monkeypatch):
+def no_external_api_keys(monkeypatch):
     """
-    Ensure the WeatherAPI key is unset by default, so the connector fails soft
-    (and makes NO live call) unless a test explicitly opts in with monkeypatch.
-    Keeps the suite deterministic regardless of a developer's shell env, and
-    honors CLAUDE.md's "never hit live endpoints from the test suite".
+    Unset every external API key by default, so the keyed connectors (WeatherAPI,
+    Gemini, Groq) fail soft and make NO live call unless a test explicitly opts in
+    with monkeypatch/mock. Keeps the suite deterministic regardless of a
+    developer's shell env, and honors CLAUDE.md's "never hit live endpoints".
     """
-    monkeypatch.delenv("WEATHERAPI_KEY", raising=False)
+    for key in ("WEATHERAPI_KEY", "GEMINI_API_KEY", "GROQ_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
