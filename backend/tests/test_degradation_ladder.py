@@ -208,3 +208,57 @@ def test_apply_historical_fallback_stays_gap_when_no_baseline():
     result = degradation_ladder.apply_historical_fallback(record, "Nowhere-XYZ-123")
     assert result["data_tier"] == "source_unavailable"
     assert result["temp"] is None
+
+
+def _weatherapi_exact():
+    return {
+        "temp": 34.0, "humidity": 40, "feels_like": 38.0, "wind_speed": 10.0,
+        "precipitation_chance": 0.1, "condition": "Sunny", "source": "WeatherAPI",
+        "data_tier": "exact", "fetched_at": "2026-09-08T00:00:00Z", "_raw_hourly": {},
+    }
+
+
+@patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
+@patch("app.core.degradation_ladder.weatherapi.fetch_forecast")
+def test_fetch_forecast_prefers_weatherapi_and_skips_open_meteo(mock_wapi, mock_om):
+    mock_wapi.return_value = _weatherapi_exact()
+
+    result = degradation_ladder.fetch_forecast_with_fallback({"lat": 28.6, "lon": 77.2})
+
+    assert result["source"] == "WeatherAPI"
+    mock_om.assert_not_called()  # primary answered, no need to call the fallback
+
+
+@patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
+@patch("app.core.degradation_ladder.weatherapi.fetch_forecast")
+def test_fetch_forecast_falls_back_to_open_meteo_when_weatherapi_down(mock_wapi, mock_om):
+    mock_wapi.return_value = _unavailable_forecast() | {"source": "WeatherAPI"}
+    mock_om.return_value = {
+        "temp": 30.0, "humidity": 60, "feels_like": 32.0, "wind_speed": 8.0,
+        "precipitation_chance": 0.2, "condition": "clear sky", "source": "Open-Meteo",
+        "data_tier": "exact", "fetched_at": "2026-09-08T00:00:00Z", "_raw_hourly": {},
+    }
+
+    result = degradation_ladder.fetch_forecast_with_fallback({"lat": 28.6, "lon": 77.2})
+
+    assert result["source"] == "Open-Meteo"
+    mock_om.assert_called_once()
+
+
+@patch("app.core.degradation_ladder.imd.fetch_warnings")
+@patch("app.core.degradation_ladder.open_meteo_air_quality.fetch_air_quality")
+@patch("app.core.degradation_ladder.open_meteo.fetch_forecast")
+@patch("app.core.degradation_ladder.weatherapi.fetch_forecast")
+def test_get_weather_reports_weatherapi_as_source_when_primary_up(mock_wapi, mock_om, mock_aqi, mock_warnings):
+    mock_wapi.return_value = _weatherapi_exact()
+    mock_aqi.return_value = _healthy_aqi()
+    mock_warnings.return_value = {
+        "warnings": [], "source": "IMD", "data_tier": "exact", "fetched_at": "2026-09-08T00:00:00Z",
+    }
+
+    result = degradation_ladder.get_weather("Delhi")
+
+    assert result["data_tier"] == "exact"
+    assert result["source"] == "WeatherAPI"
+    assert result["temp"] == 34.0
+    mock_om.assert_not_called()
