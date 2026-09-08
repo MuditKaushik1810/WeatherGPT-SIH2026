@@ -38,6 +38,9 @@ def get_home_view(location_name: str) -> dict:
 
     om_data, imd_data, aq_data = degradation_ladder.fetch_sources(coords, location_name)
     current = normalize.normalize_weather_record(location_name, om_data, imd_data, aq_data)
+    # Same ladder as GET /weather: if live forecast is down, degrade to the
+    # historical baseline (typical-for-this-date) rather than a null current block.
+    current = degradation_ladder.apply_historical_fallback(current, location_name)
 
     raw_hourly = om_data.get("_raw_hourly")
     # Start the hourly strip at the current hour, not midnight (index 0).
@@ -52,7 +55,9 @@ def get_home_view(location_name: str) -> dict:
         "data_tier": current["data_tier"],
     }
 
-    # Don't cache a transient source outage (mirrors get_weather).
-    if current["data_tier"] != "source_unavailable":
+    # Cache only settled live tiers (mirrors get_weather): a source_unavailable
+    # or historical_baseline fallback is re-checked each request so a recovered
+    # live source is served immediately, never a stale gap/baseline.
+    if current["data_tier"] in ("exact", "regional_fallback"):
         cache.set(cache_key, view)
     return view
