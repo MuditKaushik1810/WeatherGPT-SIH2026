@@ -4,11 +4,20 @@ Run locally with: uvicorn app.main:app --reload --app-dir backend
 """
 import os
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.degradation_ladder import get_weather
-from app.core.home_view import get_home_view
+# Load backend/.env (if present) so local dev can set WEATHERAPI_KEY /
+# FRONTEND_ORIGINS without exporting them every shell. Pointed explicitly at
+# backend/.env because the server runs from the repo root (--app-dir backend),
+# where the default upward search wouldn't find it. A no-op in production —
+# Render injects env vars directly and there's no .env file. Must run before
+# any os.getenv below.
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
+from app.core.degradation_ladder import get_weather  # noqa: E402  (after load_dotenv, intentionally)
+from app.core.home_view import get_home_view  # noqa: E402
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
