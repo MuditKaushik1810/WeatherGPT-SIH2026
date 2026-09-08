@@ -18,6 +18,15 @@ with open(_DATA_PATH) as f:
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
 
+def known_city_names() -> list[str]:
+    """
+    The static gazetteer's city names (lowercased keys) — the zero-network set
+    the intent fast-path scans a free-text query against. Sorted longest-first
+    so a multi-word match ("new delhi") wins over a substring of it ("delhi").
+    """
+    return sorted(_STATIC_CITIES.keys(), key=len, reverse=True)
+
+
 def resolve_location(name: str) -> dict | None:
     key = name.strip().lower()
     if key in _STATIC_CITIES:
