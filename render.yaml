@@ -28,3 +28,10 @@ services:
       # historical baselines — deploy still works, just not on WeatherAPI.
       - key: WEATHERAPI_KEY
         sync: false
+      # LLM for POST /chat — Gemini Flash primary, Groq optional fallback. Both
+      # sync:false (set in the dashboard). If unset, /chat returns deterministic
+      # grounded answers instead of LLM-phrased ones — it never bare-refuses.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

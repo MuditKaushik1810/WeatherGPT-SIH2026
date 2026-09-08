@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 # Load backend/.env (if present) so local dev can set WEATHERAPI_KEY /
 # FRONTEND_ORIGINS without exporting them every shell. Pointed explicitly at
@@ -18,6 +19,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 from app.core.degradation_ladder import get_weather  # noqa: E402  (after load_dotenv, intentionally)
 from app.core.home_view import get_home_view  # noqa: E402
+from app.core.chat import answer_query  # noqa: E402
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
@@ -33,7 +35,7 @@ _origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -61,3 +63,21 @@ def home(location_name: str):
     rule-based recommendation, assembled in one response (Section 3.10).
     """
     return get_home_view(location_name)
+
+
+class ChatRequest(BaseModel):
+    query: str
+    language: str = "en"
+    user_id: str | None = None
+
+
+@app.post("/chat")
+def chat(request: ChatRequest):
+    """
+    Grounded conversational endpoint (Section 3.10). Runs the Sprint 2 pipeline:
+    intent extraction → degradation-ladder retrieval → grounding assembler → LLM
+    answer (rephrasing only the grounded facts). Never bare-refuses — if the LLM
+    is unavailable it returns a deterministic grounded answer. Returns
+    {answer, data_tier, source, query_class, audio_url}.
+    """
+    return answer_query(request.query, request.language, request.user_id)
