@@ -1,0 +1,30 @@
+# Render Blueprint — deploys the WeatherGPT FastAPI backend as a web service.
+# Spec: https://render.com/docs/blueprint-spec
+#
+# Frontend deploys separately as a static site (see docs/DEPLOYMENT.md) because
+# its build needs VITE_API_BASE_URL pointed at this service's live URL, which
+# only exists after the backend is created.
+services:
+  - type: web
+    name: weathergpt-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Comma-separated browser origin(s) allowed by CORS. Set this in the Render
+      # dashboard to the deployed frontend URL once it exists (kept out of the
+      # blueprint because the URL isn't known until the static site is created).
+      - key: FRONTEND_ORIGINS
+        sync: false
+      # WeatherAPI.com key — the PRIMARY forecast source (see app/connectors/
+      # weatherapi.py). sync:false = set the real value in the dashboard, never
+      # in the repo. If unset, the app fails soft to Open-Meteo, then to
+      # historical baselines — deploy still works, just not on WeatherAPI.
+      - key: WEATHERAPI_KEY
+        sync: false
