@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import Home from './pages/Home'
 import Travel from './pages/Travel'
 import Disaster from './pages/Disaster'
+import CropWatch from './pages/CropWatch'
 
 function getPageFromHash() {
   const page = window.location.hash.replace('#', '').split('?')[0]
-  return ['home', 'travel', 'disaster'].includes(page) ? page : 'home'
+  return ['home', 'travel', 'disaster', 'farmer', 'farmer/watch'].includes(page) ? page : 'home'
 }
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
+  if (page === 'farmer' || page === 'farmer/watch') return <CropWatch />
   if (page === 'disaster') return <Disaster />
   if (page === 'travel') return <Travel />
   return <Home />
