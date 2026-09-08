@@ -13,7 +13,7 @@ of duplicating it (CLAUDE.md: never duplicate logic — extend or import).
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.connectors import imd, open_meteo, open_meteo_air_quality
+from app.connectors import imd, open_meteo, open_meteo_air_quality, weatherapi
 from app.core import cache, geocoding, historical, normalize
 
 
@@ -42,16 +42,34 @@ def unresolved_record(location_name: str) -> dict:
     }
 
 
+def fetch_forecast_with_fallback(coords: dict) -> dict:
+    """
+    Get a forecast record from the primary source, falling back to the secondary
+    if the primary is unavailable — the live half of the degradation ladder.
+
+    Primary is WeatherAPI (key-based, so it isn't at the mercy of a shared-IP
+    rate limit); Open-Meteo (keyless, richer horizon, but 429-prone on a shared
+    IP) is the fallback. Both return the identical record shape, so the caller
+    can't tell which answered except via the `source` field. Both fail soft, so
+    if BOTH are down this returns an "unavailable" record for the ladder to
+    degrade further (→ historical_baseline).
+    """
+    primary = weatherapi.fetch_forecast(coords["lat"], coords["lon"])
+    if primary["data_tier"] != "unavailable":
+        return primary
+    return open_meteo.fetch_forecast(coords["lat"], coords["lon"])
+
+
 def fetch_sources(coords: dict, location_name: str) -> tuple[dict, dict, dict]:
     """
     Fetch every live connector for an already-resolved location. Connectors fail
     soft (CLAUDE.md), so this never raises — callers get "unavailable" records
     to degrade on instead of an exception.
     """
-    om_data = open_meteo.fetch_forecast(coords["lat"], coords["lon"])
+    forecast_data = fetch_forecast_with_fallback(coords)
     imd_data = imd.fetch_warnings(location_name)
     aq_data = open_meteo_air_quality.fetch_air_quality(coords["lat"], coords["lon"])
-    return om_data, imd_data, aq_data
+    return forecast_data, imd_data, aq_data
 
 
 def apply_historical_fallback(record: dict, location_name: str, now: datetime | None = None) -> dict:
