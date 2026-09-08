@@ -5,8 +5,8 @@ it('renders Crop Watch as a separate Farmer Mode with only farmer-local navigati
   render(<CropWatch />)
 
   expect(screen.getByRole('heading', { name: 'Crop Watch' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: 'Crop Planning' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: 'Crop Watch' })).toHaveAttribute('aria-selected', 'true')
+ expect(screen.getByRole('button', { name: /Crop Planning, coming next/i })).toBeInTheDocument()
+ expect(screen.getByRole('button', { name: 'Crop Watch' })).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByText('Home')).not.toBeInTheDocument()
   expect(screen.queryByText('Travel')).not.toBeInTheDocument()
   expect(screen.queryByText('Disaster')).not.toBeInTheDocument()
