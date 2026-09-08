@@ -18,6 +18,7 @@ always"): never raise up to the degradation ladder. On any network error,
 non-2xx response, or unexpected payload, return an "unavailable" record with
 aqi=None and let the ladder carry on.
 """
+import logging
 from datetime import datetime, timezone
 
 import requests
@@ -25,6 +26,8 @@ import requests
 # Reuse the forecast connector's "which hourly index is now" helper — both APIs
 # return their hourly series starting at 00:00 local, so index 0 is midnight.
 from app.connectors.open_meteo import current_hour_index
+
+logger = logging.getLogger(__name__)
 
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
@@ -80,6 +83,14 @@ def fetch_air_quality(lat: float, lon: float, timezone_name: str = "Asia/Kolkata
             "data_tier": "exact" if aqi is not None else "unavailable",
             "fetched_at": datetime.now(timezone.utc).isoformat(),
         }
-    except Exception:
-        # Fail soft, always. See module docstring.
+    except requests.HTTPError as exc:
+        # Non-2xx (e.g. a 429 rate-limit). Surface the status + reason body so a
+        # production outage is diagnosable instead of silent, then fail soft.
+        status = exc.response.status_code if exc.response is not None else "?"
+        body = exc.response.text[:300] if exc.response is not None else ""
+        logger.warning("Open-Meteo air-quality HTTP %s for (%s, %s): %s", status, lat, lon, body)
+        return _unavailable_record()
+    except Exception as exc:
+        # Fail soft, always. Log the reason first. See module docstring.
+        logger.warning("Open-Meteo air-quality failed for (%s, %s): %r", lat, lon, exc)
         return _unavailable_record()
