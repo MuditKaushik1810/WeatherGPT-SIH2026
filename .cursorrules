@@ -25,11 +25,19 @@ before it reaches the grounding assembler (see `backend/app/core/normalize.py`):
       "temp": float,
       "condition": str,
       "precipitation_chance": float,
+      "humidity": float,       # % relative humidity (Open-Meteo forecast)
+      "feels_like": float,     # apparent temperature, °C (Open-Meteo forecast)
+      "wind_speed": float,     # km/h (Open-Meteo forecast)
+      "aqi": int,              # US AQI scale (Open-Meteo Air Quality API — NOT India CPCB)
       "warnings": list[str],
       "source": str,          # "IMD" | "Open-Meteo" | "Historical"
-      "data_tier": str,       # "exact" | "regional_fallback" | "historical_baseline" | "unresolved_location"
+      "data_tier": str,       # "exact" | "regional_fallback" | "historical_baseline" | "source_unavailable" | "unresolved_location"
       "fetched_at": datetime,
     }
+
+Any of temp/condition/precipitation_chance/humidity/feels_like/wind_speed/aqi
+may be `None` when its source is unavailable (a soft failure) — consumers must
+tolerate a null metric rather than assuming every field is populated.
 
 Adding a new field is safe — do it freely, mention it in standup. Renaming,
 removing, or changing the type of an existing field is a breaking change —

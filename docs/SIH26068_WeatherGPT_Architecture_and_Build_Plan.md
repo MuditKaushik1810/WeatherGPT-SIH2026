@@ -90,7 +90,7 @@ The platform stays genuinely general-purpose at its core (satisfying the PS's li
 | Persona | Role in the product | Depth |
 |---|---|---|
 | **General individual** | Baseline conversational Q&A — current conditions, forecasts, alerts | Table-stakes; satisfies the brief, not the differentiator |
-| **Traveler / trip planner** | Multi-day itinerary-aware planning (Sprint 3) | Moderate depth — a genuine feature, not just a query type |
+| **Traveler / trip planner** | Route-aware stop planner: rates stops along the route from the forecast at each ETA, with nearby facilities (Sprint 3; UI shipped, Geoapify backend pending) | Moderate depth — a genuine, differentiated feature |
 | **Farmer (flagship persona)** | Dedicated dashboard: crop-specific advisory, risk scoring, sowing/harvest guidance (Sprint 3) | Deep, curated, sourced — this is the standout |
 | **Disaster manager / government stakeholder** | Severity-sorted Disaster Manager view with Trend Engine context (Section 3.9) | Real dedicated UI now, though still the least user-validated persona — the team has no real access to actual government workflows to design against |
 | **General individual, during an active alert** | Hazard-specific safety guidance and, at the highest severity tier, Active Emergency Mode (Section 3.9) | Curated, NDMA-sourced — the second-most safety-critical feature in the product after grounding itself |
@@ -182,9 +182,9 @@ flowchart TB
         ANOMALY["Anomaly Detector\ncurrent vs baseline"]
     end
 
-    subgraph TripPlan["Trip Planning Feature"]
-        TRIPROUTER{"Trip within\nforecast horizon\n(~10-16 days)?"}
-        TRIPSYNTH["Day-by-Day Itinerary Synthesis\n(LLM call over pulled data)"]
+    subgraph TripPlan["Trip Planning — route-aware stop planner"]
+        TRIPROUTE["Geocode + Route\n(Geoapify: origin to destination\n+ checkpoints)"]
+        TRIPRATE["Rate stops + facilities\n(weather at each ETA,\nGeoapify Places)"]
     end
 
     subgraph Disaster2["Disaster Safety — individual + emergency mode"]
@@ -222,7 +222,7 @@ flowchart TB
     INTENT -->|"realtime query"| CACHE
     INTENT -->|"historical/trend query"| HISTDB
     INTENT -->|"farmer advisory query"| CROPPROFILE
-    INTENT -->|"trip planning query"| TRIPROUTER
+    INTENT -->|"trip planning query"| TRIPROUTE
     INTENT -->|"safety/emergency query"| HAZARDGUIDE
     CACHE -.->|"cache miss"| LADDER
     LADDER --> IMDCONN
@@ -238,9 +238,9 @@ flowchart TB
     OWCONN --> SUITABILITY
     SUITABILITY --> RISKCALC
     RISKCALC --> ADVISORY --> GROUND
-    TRIPROUTER -->|"yes"| OWCONN
-    TRIPROUTER -->|"no — beyond forecast horizon"| HISTDB
-    TRIPROUTER --> TRIPSYNTH --> GROUND
+    TRIPROUTE --> TRIPRATE
+    OWCONN --> TRIPRATE
+    TRIPRATE --> GROUND
     IMDCONN --> SEVCHECK
     SEVCHECK -->|"yes"| EMERGENCY --> GROUND
     SEVCHECK -->|"no"| HAZARDGUIDE --> GROUND
@@ -286,9 +286,9 @@ flowchart TB
 | Farmer Advisory | Harvest/action timing advisory | Combines forecast + rule table into a concrete recommendation | Plain Python, feeds into grounding assembler | Free |
 | Trend Engine | Multi-year baseline | Moving average per location/variable from the preloaded historical dataset | Plain Python / pandas | Free |
 | Trend Engine | Trend regression | Direction + slope of a variable over available years (e.g. monsoon onset drifting later) | `numpy.polyfit` — basic stats, not ML | Free |
-| Trend Engine | Anomaly detector | Compares current season vs. baseline; feeds the Risk Index, the Trip Planner's far-future estimate, and Trend-Informed Advisory | Plain Python; shared across three features | Free |
-| Trip Planning | Forecast-horizon router | Routes to live forecast (≤~10-16 days out) or historical baseline (further out) | Plain Python date comparison | Free |
-| Trip Planning | Itinerary synthesis | LLM call that turns a week of pulled data into a coherent day-by-day note | Same LLM API as Generation layer | Free tier |
+| Trend Engine | Anomaly detector | Compares current season vs. baseline; feeds the Risk Index and Trend-Informed Advisory | Plain Python; shared across features | Free |
+| Trip Planning | Route + stop planner | Geocode origin/destination, route between them, and select the checkpoints along the way | Geoapify (geocoding + routing) | Free tier (API key) |
+| Trip Planning | Stop rating + facilities | Forecast at each checkpoint's ETA → good/caution/not-recommended, plus nearby facilities per stop | Open-Meteo + Geoapify Places | Free tier (API key) |
 | Disaster Safety | Curated Hazard Safety Guide | Do's/don'ts for flood, cyclone, heatwave, thunderstorm/lightning, cold wave — sourced from NDMA's published guidance | Static JSON, hand-curated, cited | Free |
 | Disaster Safety | Active Emergency Mode | Triggers at highest alert severity; shows immediate action steps + a verified helpline block (NDMA 1078, pan-India Emergency 112); explicitly flags that district control-room numbers must be looked up per location, not hardcoded | Plain Python severity check + curated content | Free |
 | Personalization | Digest scheduler | Per-user scheduled job assembling a personalized daily summary (forecast/alerts/crop advisory/trend comparison per saved preferences) and delivering via push or queued Background Sync | APScheduler, reuses the grounding assembler | Free |
@@ -414,7 +414,7 @@ Disease Suitability = w_temp × temp_suitability(T) + w_humidity × humidity_sui
 
 ## 3.8 Trend Engine (shared component)
 
-Historical data has one correct use, and it isn't just decorating a charts tab: combined with the current forecast, it drives actionable recommendations. This single component now serves three features that were previously separate:
+Historical data has one correct use, and it isn't just decorating a charts tab: combined with the current forecast, it drives actionable recommendations. This single component now serves two features that were previously separate:
 
 1. **Multi-year baseline** — a moving average per location/variable computed from the preloaded historical dataset (e.g., typical monsoon onset date, typical seasonal rainfall total).
 2. **Trend regression** — a simple linear fit (`numpy.polyfit`, still statistics, not ML) showing whether that variable is drifting over the available years — monsoon onset trending later, a region trending warmer for a given date.
@@ -422,10 +422,11 @@ Historical data has one correct use, and it isn't just decorating a charts tab: 
 
 **The advisory logic activates when the anomaly and the multi-year trend agree**, not from either signal alone — e.g., this year's early rainfall running below average *and* the 10-year trend showing monsoon onset drifting later together justify a concrete recommendation ("consider delaying sowing by roughly a week"), tagged with the data tier "historical trend + current forecast."
 
-**Three consumers of the same component** (build once, reuse three ways):
+**Two consumers of the same component** (build once, reuse two ways):
 - The Crop Risk Index's baseline-deviation term (Section 3.7)
-- The Trip Planner's far-future climatological estimate (Section 4, Sprint 3)
 - The standalone Trend-Informed Advisory feature for general/farmer queries about how this season compares to historical norms
+
+*(The route-aware Trip Planner — Feature 9 / Section 3.10 — no longer consumes the Trend Engine: it plans near-term routes using live forecasts at each stop's ETA, not far-future climatology.)*
 
 ---
 
@@ -502,16 +503,22 @@ This is the piece that makes frontend and backend work genuinely independent (Se
   "valid_until": "2026-09-11", "sources": ["IMD forecast", "ICAR wheat rule table"] }
 ```
 
-`POST /trip-plan`
+`POST /trip-plan` — **route-aware stop planner**: geocodes the origin + destination, routes between them, and rates stops along the way from the forecast at each stop's ETA, plus nearby facilities. Weather comes from Open-Meteo; geocoding, routing, and facilities from **Geoapify** (§8.2). The frontend Travel tab already renders this shape (mock data today).
 ```json
-{ "destination": "Manali",
-  "days": [
-    { "date": "2026-05-14", "temp_high": 18, "temp_low": 10, "condition": "clear", "data_tier": "exact" },
-    { "date": "2026-05-25", "temp_high": 19, "temp_low": 11, "condition": "typical",
-      "data_tier": "historical_baseline", "note": "Beyond forecast horizon" }
+{ "route": { "from": "Noida, Uttar Pradesh", "to": "Jaipur, Rajasthan",
+             "distance_km": 280, "estimated_time": "5h 20m", "route_name": "NH48", "condition": "Good" },
+  "departure": { "label": "Tomorrow", "time": "8:00 AM" },
+  "checkpoints": [
+    { "id": "gurugram", "name": "Gurugram", "distance_km": 42, "eta": "8:45 AM",
+      "temperature": 30, "weather": "partly cloudy", "rain_probability": 20,
+      "status": "good", "note": "Good stop with low rain probability.",
+      "facilities": { "restaurants": "20+", "fuel_stations": 6, "hotels": "10+", "hospitals": 4, "parking": "Yes" } }
   ],
-  "summary": "Best outdoor day looks like Day 5. Pack a rain layer for Day 3." }
+  "summary": "Good travel conditions expected from Noida to Jaipur.",
+  "weather_source": "Open-Meteo", "routing_source": "Geoapify",
+  "data_tier": "regional_fallback", "fetched_at": "2026-09-08T08:00:00" }
 ```
+(`status` ∈ `good` | `caution` | `not_recommended`, derived from rain/temperature at the stop's ETA. Provenance is **split** — `weather_source` vs `routing_source` — because the weather and the routing/facilities come from different providers; don't collapse them to one `source`.)
 
 `GET /disaster/alerts`
 ```json
@@ -617,16 +624,18 @@ This replaces the hour-by-hour hackathon-day plan with a day-based sprint plan f
 
 1. Multi-year baseline (moving average per location/variable) from the Sprint 1 historical dataset.
 2. Trend regression (`numpy.polyfit`) for direction/slope over available years.
-3. Anomaly detector comparing current season against baseline — feeds the Risk Index, Trip Planning's far-future estimate, and the standalone Trend-Informed Advisory query type ("how does this season compare to normal").
+3. Anomaly detector comparing current season against baseline — feeds the Risk Index and the standalone Trend-Informed Advisory query type ("how does this season compare to normal").
 
-**Trip Planning** (smaller share of this sprint; a good task for whoever finishes Sprint 2 early):
+**Trip Planning — route-aware stop planner** (the frontend Travel tab already exists; this sprint wires the backend):
 
-1. Add `query_class: trip_planning` to intent extraction; extract destination and date range.
-2. Route by forecast horizon: live multi-day forecast if the trip is within ~10–16 days, otherwise the historical dataset with explicit climatological framing.
-3. LLM synthesis of a day-by-day itinerary note (not just raw per-day numbers).
-4. Test one near-term and one far-future example.
+1. Free-text origin + destination entry; geocode both ends (Geoapify).
+2. Route between them (Geoapify Routing) → distance, ETA, route name, and the checkpoints/stops along the way.
+3. For each checkpoint, pull the forecast at its ETA (Open-Meteo) and rate the stop `good` / `caution` / `not_recommended` from rain/temperature.
+4. Fetch nearby facilities per stop (Geoapify Places — restaurants, fuel, hotels, hospitals, parking).
+5. Return the composite `/trip-plan` shape (Section 3.10) the Travel tab already renders.
+6. Test with one real route — mock the Geoapify/Open-Meteo calls, per the testing rules.
 
-**Checkpoint at end of Sprint 3:** a farmer can set up a crop profile and get a working risk score and harvest advisory; a trip-planning query produces a coherent multi-day itinerary note.
+**Checkpoint at end of Sprint 3:** a farmer can set up a crop profile and get a working risk score and harvest advisory; a trip query produces a route with rated stops (weather at each ETA + nearby facilities).
 
 ### Sprint 4 — Depth Tier: Alerting, Disaster View, PWA/Offline, Testing (Days 8–10, overlapping Sprint 3's tail)
 
@@ -707,8 +716,8 @@ With 12–13 days instead of 36 hours, the team shouldn't need harsh cuts — bu
 - [ ] Auto-generated API documentation (Swagger/OpenAPI)
 - [ ] Architecture diagram (this document, Section 3.1)
 - [ ] Farmer Advisory Dashboard working end-to-end across all 8 crops (crop profile, harvest-timing advisory, Disease Suitability Model, Crop Risk Index with historical baseline)
-- [ ] Trend Engine feeding the Risk Index, Trip Planner, and a standalone Trend-Informed Advisory query
-- [ ] Trip planning flow working for at least one near-term and one far-future example
+- [ ] Trend Engine feeding the Risk Index and a standalone Trend-Informed Advisory query
+- [ ] Trip planning flow working end-to-end for at least one route (rated stops + nearby facilities)
 - [ ] Disaster Manager severity-sorted alert view with Trend Engine context
 - [ ] Disaster Safety Guidance cards + Active Emergency Mode, sourced and cited to NDMA, with verified helpline block
 - [ ] Personalized daily digest with working settings and scheduled delivery
@@ -729,6 +738,9 @@ This section tracks what has actually been built versus the plan above, and — 
 **Sprint 1 data foundation (as planned):** static geocoding table + Nominatim fallback; Open-Meteo forecast connector (fail-soft); IMD warnings connector (stub, fail-soft); the degradation ladder; normalization to the shared record; short-TTL in-memory cache; `pytest` + GitHub Actions CI (backend).
 
 **Additive — built but not strictly in the original plan (record it here so the doc stays honest):**
+- **WeatherAPI.com forecast connector is now the PRIMARY forecast source; Open-Meteo is the fallback.** Open-Meteo is keyless and rate-limited *per IP*, so on a shared deployment IP (Render's free tier) it returns HTTP 429 "Daily API request limit exceeded" from *other tenants'* traffic — confirmed in production. WeatherAPI authenticates by key (`WEATHERAPI_KEY` env), so the quota is tied to us, not the shared IP. The ladder fetches WeatherAPI first and falls back to Open-Meteo (`fetch_forecast_with_fallback`); both return the identical record shape, so it's a true drop-in. Coded to WeatherAPI's **Free-plan** limits (3-day horizon, 100k/mo) so nothing breaks when a trial downgrades. `aqi` intentionally stays on Open-Meteo (WeatherAPI reports a 1-6 category, not the 0-500 US AQI our contract/recommendation thresholds use). Fails soft if the key is absent → falls straight to Open-Meteo, so the deploy works before the key is set.
+- **`historical_baseline` tier wired into the ladder.** When every live forecast source is down, `get_weather` and `/home` now degrade to the preloaded historical baseline (typical temperature for the date) instead of a null current block — tagged `historical_baseline`, source `"Historical"`, with live AQI and any active warnings preserved. Locations with no preloaded baseline stay `source_unavailable` (honest). This is the ladder finally doing end-to-end what §3.4 describes.
+- **Connector fail-soft logging.** The connectors' `except` branches now log the failure reason (HTTP status + response body) at WARNING before returning the unavailable record, so a production source outage is diagnosable in logs instead of silently swallowed.
 - **Open-Meteo Air Quality connector** — a *separate* API from the forecast one, added to supply `aqi`. Returns the **US-AQI** scale, not India's CPCB scale (labelled honestly). Fails soft like every connector.
 - **Extra current-conditions metrics** — `humidity`, `feels_like`, `wind_speed` added to the normalized data contract (additive; also in CLAUDE.md).
 - **`source_unavailable` data_tier** — a new tier for "location resolved, but the live source is down," distinct from `unresolved_location`. Transient outages are not cached.
@@ -749,12 +761,13 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 | Disaster alert details + safety guidance | a hardcoded generic advice line in the UI | **NDMA-sourced Hazard Safety Guide** (`GET /disaster/safety-guide`, Section 3.9) — hazard-specific, curated, cited |
 | Rescue facilities | demo mock (no `data_tier`) | real `GET /disaster/rescue-facilities/{location}` (e.g. Google Places) |
 | SEND SOS | demo-only; contacts no one, says so | real dispatch flow — likely **stays a demo** per the zero-cost constraint (Section 3.5); if built, needs a delivery channel |
-| Travel tab | placeholder screen | Trip Planner API (`POST /trip-plan`, Section 3.10) |
+| Travel Planner tab | route/checkpoint UI shipped (mock data) | `POST /trip-plan` backend: **Geoapify** (geocoding + routing + Places for facilities) + multi-day forecast at each ETA. Needs a `GEOAPIFY_API_KEY` secret + free-tier rate handling. Section 3.10. **The forecasting source for arbitrary multi-day stops is an open decision — see §8.3.** |
 | Recommendation | rule-based (shipped) | optional Sprint-2 upgrade to the grounded-LLM advisory |
 
 ### 8.3 Engineering gaps to close
 
 - **Deployment** — a single deployed instance (Render/Railway, per Section 2) is still to be stood up.
+- **Trip Planner forecasting source — open decision (decide when the Sprint-3 backend is built).** The route-aware Trip Planner needs *reliable*, *multi-day* (up to ~14–16-day) forecasts at *arbitrary* route-stop coordinates. No current free path satisfies all three at once: WeatherAPI's Free plan caps at a 3-day horizon; Open-Meteo covers 16 days for any coordinate but is 429-prone on a shared deployment IP; and the top-cities prefetch does **not** help, because route stops are arbitrary points, not a fixed city list (and the prefetch holds historical climatology, not future-date forecasts). Options: **(a)** give the backend a dedicated egress IP (Fly.io dedicated IPv4 / a small VPS / static-IP add-on) so Open-Meteo's free per-IP quota is entirely ours — the cause-level fix, and it would let Open-Meteo be primary everywhere again; **(b)** a WeatherAPI paid tier (14-day, keyed); **(c)** client-side Open-Meteo calls from each user's own IP for the stop weather (outside the server-side grounding path, so display-only); or **(d)** scope the feature to ~10-day live forecast + clearly-labelled seasonal/historical beyond (forecast skill past ~10 days is essentially climatology anyway). Whichever we pick, this must be a deliberate choice — **not** an assumption that the prefetch/Supabase cache covers it, which it does not.
 
 *(Closed since first drafted: the frontend test suite (Vitest + React Testing Library); the frontend CI job — `npm ci` → build → test; and the "current conditions anchored to 00:00" bug — the connectors now read the current-hour index via `open_meteo.current_hour_index`, so current temp/AQI and the hourly strip's "Now" reflect the actual hour.)*
 
