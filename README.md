@@ -21,9 +21,11 @@ pytest -v                # confirm the test suite passes before you start
 uvicorn app.main:app --reload
 ```
 
-Then visit `http://localhost:8000/` for the health check, or
+Then visit `http://localhost:8000/` for the health check,
 `http://localhost:8000/weather/Delhi` to see the degradation ladder in action,
-or `http://localhost:8000/docs` for the auto-generated API docs.
+or `http://localhost:8000/docs` for the auto-generated API docs. `POST /chat`
+answers natural-language questions (grounded); set `GEMINI_API_KEY` in `.env` for
+LLM-phrased answers, otherwise it returns a deterministic grounded answer.
 
 ## Quick start — frontend
 
@@ -41,19 +43,37 @@ it fetches live weather from the backend's `/home/{location}` endpoint.
 
 ## Current status
 
-**Sprint 1 (foundation) — largely complete.** Backend: static geocoding table
-(+ Nominatim fallback), Open-Meteo forecast connector and a separate Open-Meteo
-Air Quality connector (both fail-soft; current conditions read the actual current
-hour), the degradation ladder, normalization to the shared data shape, and a
-short-TTL cache — all covered by a `pytest` suite in CI. Endpoints:
+**Sprint 1 (foundation) — complete and deployed.** Backend: static geocoding
+(~510 Indian cities + Nominatim fallback); a keyed **WeatherAPI** forecast
+connector (primary) with **Open-Meteo** as fallback and a preloaded **historical
+baseline** tier below that; a separate Open-Meteo Air Quality connector; the
+degradation ladder (exact → regional → historical baseline → source-unavailable →
+honest gap — never a bare refusal); normalization to the shared data shape; and a
+short-TTL cache — all covered by a `pytest` suite in CI. Endpoints
 `/weather/{location}` and the composite `/home/{location}` (current + hourly + a
-rule-based recommendation), with CORS for the browser frontend. Frontend
-(React + Vite): a live-wired **Home** tab (location entry, remembered via
-localStorage, loading/error states), a **Disaster** tab, and a **Travel Planner**
-tab, with a Vitest suite in CI. Deploy config (`render.yaml` +
-`docs/DEPLOYMENT.md`) is ready.
+rule-based recommendation). Deployed on Render: the FastAPI backend and a
+React/Vite static-site frontend (`render.yaml` + `docs/DEPLOYMENT.md`).
 
-Still open in Sprint 1: a deployed instance, the preloaded historical dataset,
-expanding the geocoding table (~40 → ~500), and a real IMD warnings connector
-(currently a fail-soft stub). See the Architecture doc, Section 8, for the full
-status and backlog.
+**Sprint 2 (conversational core) — in place.** The grounded chat pipeline behind
+`POST /chat`: rule/keyword **intent extraction** → degradation-ladder retrieval →
+a **grounding assembler** (the anti-hallucination step — the model only rephrases
+verified facts, never invents) → an answer from **Gemini Flash** (Groq fallback;
+both keyed via env; fail-soft to a deterministic grounded answer when no key). It
+is forecast-aware ("tomorrow" / "this week" pull the day's forecast), never
+bare-refuses, and caches settled answers briefly (short TTL). Frontend
+(React + Vite): a live-wired **Home** tab, a **Disaster** tab, a **Travel
+Planner** tab, **Farmer Mode** (Crop Watch + Crop Planning), a unified fixed
+bottom nav, and a themed **Chat** screen — opened from Home's "Ask WeatherGPT"
+card / floating button, with situational suggestions, a provenance chip on every
+answer, and Web Speech voice input **and** output. The UI is **multilingual**:
+a lightweight app-wide i18n layer (en, hi, bn, ta, mr, pa) re-renders the whole
+app in the chosen language, which also drives the LLM answer language and browser
+voice. Vitest suite in CI.
+
+Still open in Sprint 2: a user **Settings** screen (default location + language +
+farmer preferences) and **chat session persistence** (restore the last
+conversation and carry follow-up context). The bn/ta/mr/pa UI strings are a
+first pass awaiting native-speaker review, and the Disaster/Travel/Farmer screens
+still need to migrate onto the i18n keys. A real IMD warnings connector (currently
+a fail-soft stub) also remains. See the Architecture doc, Section 8, for the full
+living status and backlog.
