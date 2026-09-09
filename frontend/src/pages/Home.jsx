@@ -7,13 +7,16 @@ import WeatherGPTCard from '../components/WeatherGPTCard'
 import FloatingChatButton from '../components/FloatingChatButton'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation, saveLocation } from '../lib/savedLocation'
+import { getDefaultLocation } from '../lib/preferences'
 import { useI18n } from '../i18n'
 
 const openChat = () => { window.location.hash = 'chat' }
 
 function Home() {
   const { t } = useI18n()
-  const [location, setLocation] = useState(() => getSavedLocation())
+  // Show the last active location, or fall back to the default set in Settings —
+  // so a user with a default sees their full weather card on open, not a bare screen.
+  const [location, setLocation] = useState(() => getSavedLocation() || getDefaultLocation())
   const [input, setInput] = useState(location ?? '')
   const [status, setStatus] = useState('idle') // idle | loading | success | error
   const [data, setData] = useState(null)

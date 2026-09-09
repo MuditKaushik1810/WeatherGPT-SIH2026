@@ -28,7 +28,7 @@ function Header({ location, updatedAt = null, loading = false, onReload }) {
 
   return (
     <header className="header">
-      <button className="icon-button" type="button" aria-label={t('header.menu')} title={t('header.menu')} onClick={() => {}}>
+      <button className="icon-button" type="button" aria-label={t('header.menu')} title={t('header.menu')} onClick={() => { window.location.hash = 'settings' }}>
         <span className="hamburger-line" />
         <span className="hamburger-line" />
         <span className="hamburger-line" />
