@@ -23,15 +23,14 @@ from app.core.chat import answer_query  # noqa: E402
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
-# CORS — let the browser frontend call this API. Origins are configurable via the
-# FRONTEND_ORIGINS env var (comma-separated) so the deployed frontend URL can be
-# added without a code change; defaults to the local Vite dev server.
-_DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
-_origins = [
-    origin.strip()
-    for origin in os.getenv("FRONTEND_ORIGINS", _DEFAULT_ORIGINS).split(",")
-    if origin.strip()
-]
+# CORS — let the browser frontend call this API. The deployed frontend URL is
+# configured via the FRONTEND_ORIGINS env var (comma-separated). The local Vite
+# dev origins are ALWAYS allowed on top of it, so local development works without
+# editing the env — and allowing localhost is harmless (a page served from a
+# user's own machine is not an attacker-controlled origin).
+_LOCAL_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_configured = [o.strip() for o in os.getenv("FRONTEND_ORIGINS", "").split(",") if o.strip()]
+_origins = list(dict.fromkeys(_configured + _LOCAL_DEV_ORIGINS))  # dedupe, keep order
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
