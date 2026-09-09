@@ -121,3 +121,33 @@ def test_constraints_carry_the_two_non_negotiable_rules_every_time():
         assert "never invent" in joined                    # no-hallucination rule
         assert "never reply with a bare" in joined          # no-bare-refuse rule
         assert len(ctx["constraints"]) >= 4
+
+
+def test_build_forecast_context_grounds_day_summaries():
+    fc = {
+        "location": "Delhi", "source": "WeatherAPI", "data_tier": "exact", "fetched_at": "x",
+        "days": [{
+            "offset": 1, "label": "Tomorrow", "date": "2026-09-10", "peak_temp": 34.0,
+            "low_temp": 27.0, "peak_feels_like": 37.0, "max_precip_chance": 0.7,
+            "max_wind": 15.0, "condition": "Patchy rain",
+        }],
+        "message": None,
+    }
+    ctx = grounding.build_forecast_context(fc, "realtime")
+    assert ctx["answerable"] is True
+    assert ctx["data_tier"] == "exact"
+    assert any("Tomorrow (2026-09-10)" in f for f in ctx["facts"])
+    assert any("70% chance of rain" in f for f in ctx["facts"])
+    assert any("high 34.0°C, low 27.0°C" in f for f in ctx["facts"])
+    assert "FORECAST:" in ctx["context_block"]
+    joined = " ".join(ctx["constraints"]).lower()
+    assert "never invent" in joined and "never reply with a bare" in joined
+
+
+def test_build_forecast_context_empty_never_bare_refuses():
+    fc = {"location": "Delhi", "source": "WeatherAPI", "data_tier": "source_unavailable",
+          "fetched_at": None, "days": [], "message": "forecast doesn't reach that far"}
+    ctx = grounding.build_forecast_context(fc)
+    assert ctx["answerable"] is False
+    assert ctx["gap_guidance"] == "forecast doesn't reach that far"
+    assert "FORECAST: (none could be retrieved)" in ctx["context_block"]

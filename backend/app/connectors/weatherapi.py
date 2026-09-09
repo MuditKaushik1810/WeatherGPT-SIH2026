@@ -110,7 +110,7 @@ def fetch_forecast(lat: float, lon: float, timezone_name: str = "Asia/Kolkata", 
     params = {
         "key": api_key,
         "q": f"{lat},{lon}",
-        "days": 2,          # today + tomorrow: enough for a next-hours strip past midnight
+        "days": 3,          # today + 2 (free-plan max): covers "tomorrow"/"this week" chat queries
         "aqi": "no",        # AQI comes from Open-Meteo (0-500 US scale); see module docstring
         "alerts": "no",
     }

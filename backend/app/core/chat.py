@@ -13,7 +13,12 @@ back to a deterministic answer built straight from the grounded facts — so the
 endpoint never bare-refuses, with or without an LLM key configured.
 """
 from app.connectors import llm
-from app.core import degradation_ladder, grounding, intent
+from app.core import degradation_ladder, forecast, grounding, intent
+
+# Future-dated queries pull the forecast for these day offsets instead of current
+# conditions (0 = today, 1 = tomorrow). Kept small — the free forecast tier is
+# ~3 days, and forecast.get_daily_forecast skips any day beyond the horizon.
+_FUTURE_OFFSETS = {"tomorrow": [1], "week": [1, 2]}
 
 # Language code -> name for the "respond in X" instruction. Unknown codes fall
 # back to English (the LLM still receives the user's original wording).
@@ -53,7 +58,9 @@ def _deterministic_answer(ctx: dict) -> str:
     location = ctx["location"] or "that location"
     if ctx["facts"]:
         tier = ctx["data_tier"]
-        if tier == "historical_baseline":
+        if ctx.get("kind") == "forecast":
+            prefix = f"Forecast for {location}"
+        elif tier == "historical_baseline":
             prefix = f"Live data is unavailable for {location}, so here are the typical values for this date"
         elif tier == "source_unavailable":
             prefix = f"Live forecast is temporarily unavailable for {location}; here's what I have"
@@ -94,9 +101,17 @@ def answer_query(query: str, language: str = "en", user_id: str | None = None) -
     parsed = intent.extract_intent(query)
     location = parsed["location"]
     query_class = parsed["query_class"]
+    time_range = parsed["time_range"]
 
-    record = degradation_ladder.get_weather(location) if location else _need_location_record()
-    ctx = grounding.build_grounding_context(record, query_class=query_class)
+    if location and time_range in _FUTURE_OFFSETS:
+        # Future-dated query — ground the forecast for the requested day(s).
+        fc = forecast.get_daily_forecast(location, _FUTURE_OFFSETS[time_range])
+        ctx = grounding.build_forecast_context(fc, query_class)
+    else:
+        # Current conditions (or an honest "which place?" when no location parsed).
+        record = degradation_ladder.get_weather(location) if location else _need_location_record()
+        ctx = grounding.build_grounding_context(record, query_class=query_class)
+
     answer = generate_answer(ctx, query, language)
 
     return {

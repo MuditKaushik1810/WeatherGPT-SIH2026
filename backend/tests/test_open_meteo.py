@@ -205,3 +205,34 @@ def test_extract_hourly_forecast_starts_at_given_index():
     assert len(result) == 2
     assert result[0]["time"] == "2026-09-07T01:00"
     assert result[0]["temp"] == 21.0
+
+
+def test_summarize_day_targets_a_specific_date_with_condition():
+    raw = {
+        "time": ["2026-09-09T12:00", "2026-09-10T09:00", "2026-09-10T15:00"],
+        "temperature_2m": [33.0, 27.0, 34.0],
+        "apparent_temperature": [36.0, 29.0, 37.0],
+        "precipitation_probability": [20, 40, 70],
+        "wind_speed_10m": [12.0, 10.0, 15.0],
+        "condition_text": ["Sunny", "Cloudy", "Patchy rain"],
+    }
+    s = open_meteo.summarize_day(raw, "2026-09-10")
+    assert s["date"] == "2026-09-10"
+    assert s["peak_temp"] == 34.0 and s["low_temp"] == 27.0
+    assert s["max_precip_chance"] == 0.7          # 70% at the wettest hour
+    assert s["condition"] == "Patchy rain"         # condition at the wettest hour
+
+
+def test_summarize_day_absent_date_returns_empty_with_date():
+    raw = {"time": ["2026-09-09T12:00"], "temperature_2m": [33.0]}
+    s = open_meteo.summarize_day(raw, "2026-12-25")
+    assert s["date"] == "2026-12-25"
+    assert s["peak_temp"] is None
+
+
+def test_summarize_day_condition_from_weathercode_when_no_text():
+    raw = {"time": ["2026-09-10T12:00", "2026-09-10T15:00"],
+           "temperature_2m": [30.0, 31.0], "precipitation_probability": [10, 80],
+           "weathercode": [2, 61]}
+    s = open_meteo.summarize_day(raw, "2026-09-10")
+    assert s["condition"] == "slight rain"         # WMO 61 at the wettest hour
