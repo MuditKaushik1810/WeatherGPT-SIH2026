@@ -4,11 +4,12 @@ import Travel from './pages/Travel'
 import Disaster from './pages/Disaster'
 import CropWatch from './pages/CropWatch'
 import CropPlanning from './pages/CropPlanning'
+import Chat from './pages/Chat'
 import BottomNav from './components/BottomNav'
 
 function getPageFromHash() {
   const page = window.location.hash.replace('#', '').split('?')[0]
-  return ['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch'].includes(page) ? page : 'home'
+  return ['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch', 'chat'].includes(page) ? page : 'home'
 }
 
 function App() {
@@ -20,8 +21,10 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
+  // Focused, self-contained screens (own back control / nav) — no global BottomNav.
   if (page === 'farmer/planning') return <CropPlanning />
   if (page === 'farmer/watch') return <CropWatch />
+  if (page === 'chat') return <Chat />
 
   let currentPage
 

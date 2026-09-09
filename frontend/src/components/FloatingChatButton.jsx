@@ -1,25 +1,14 @@
-function FloatingChatButton({ onClick, isOpen, onClose }) {
-  if (isOpen) {
-    return (
-      <div className="chat-placeholder">
-        <div>
-          <strong>WeatherGPT</strong>
-          <p>Chat will be connected to the backend later.</p>
-        </div>
-        <button type="button" onClick={onClose} aria-label="Close chat">
-          ×
-        </button>
-      </div>
-    )
-  }
-
+// Floating "Ask WeatherGPT" button — opens the Chat tab. (Previously a
+// backend-less placeholder; now that POST /chat is live it navigates to the
+// real Chat screen.)
+function FloatingChatButton() {
   return (
     <button
       className="floating-chat-button"
       type="button"
-      aria-label="Open WeatherGPT"
+      aria-label="Open WeatherGPT chat"
       title="Ask WeatherGPT"
-      onClick={onClick}
+      onClick={() => { window.location.hash = 'chat' }}
     >
       ✦
     </button>
