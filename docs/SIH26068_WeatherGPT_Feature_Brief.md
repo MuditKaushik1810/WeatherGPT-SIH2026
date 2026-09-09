@@ -17,7 +17,7 @@ This document exists to answer one question per feature: **is this worth the tim
 | 2 | Data Foundation & Degradation Ladder | Core layer | Core | Medium | 1 |
 | 3 | Proactive Alerting | Core layer | Core | Low | 4 |
 | 4 | Farmer Advisory Dashboard | Flagship | Flagship | High | 3 |
-| 5 | Disease Suitability Model | Flagship | Flagship | Medium–High | 3 |
+| 5 | Crop Risk Index (weighted crop-stress + disease) | Flagship | Flagship | Medium–High | 3 |
 | 6 | Trend Engine | Flagship (shared) | Flagship | Medium | 3 |
 | 7 | Disaster Manager View | Disaster mgmt. | Secondary | Low | 4 |
 | 8 | Disaster Safety Guidance + Emergency Mode | Disaster mgmt. | Secondary–Flagship* | Medium | 4 |
@@ -75,9 +75,9 @@ This document exists to answer one question per feature: **is this worth the tim
 
 ## Flagship Features
 
-### 4. Farmer Advisory Dashboard
+### 4. Farmer Advisory Dashboard (Farmer Mode: Crop Planning + Crop Watch)
 
-**What it is:** A persistent crop profile (crop, field location, sowing date), an 8-crop curated rule table sourced from ICAR/GKMS advisories, a harvest/action-timing advisory, and free-text crop Q&A grounded in the rule table rather than the LLM's general training.
+**What it is:** A **separate agricultural mode** (not a fourth tab) with two distinct workflows — **Crop Planning** ("what should I grow?": ~3–4 location/season-suitable crops with reasons + harvest windows) and **Crop Watch** ("what's happening to my planted crop?": growth stage, weather threats, climate context and advisory, each threat *explained*). Backed by a persistent crop profile (crop, field location, sowing date), a curated rule table (see the locked crop list in the Architecture doc, Section 4) sourced from ICAR/GKMS, the weighted **Crop Risk Index** (Section 3.7), and free-text crop Q&A grounded in the rule table rather than the LLM's general training. Both ship demo-fixture-first behind documented shapes (Architecture §3.10 `/farmer/crop-planning`, composite `/farmer/crop-watch`). **Crop Planning is a crop-*selection* feature, not crop monitoring — that's Crop Watch's job.**
 
 **Why it's worth building:** This is the actual differentiation argument, not a side addition. A generic chatbot can say "it might rain" — it cannot say "your wheat is at grain-filling stage, humidity is trending toward fungal risk, harvest before Thursday," because nobody built that persistent state and curated logic and fed it in. Existing government portals (Kisan Suvidha and similar) are form-heavy and not conversational or personalized to one field's exact stage; a generic LLM has no persistent profile and no cited source for farming advice. This is the one feature that makes "why not just use ChatGPT" a fully answerable question.
 
@@ -87,11 +87,11 @@ This document exists to answer one question per feature: **is this worth the tim
 
 ---
 
-### 5. Disease Suitability Model
+### 5. Crop Risk Index (weighted crop-stress model, disease suitability folded in)
 
-**What it is:** Continuous 0–1 scoring for temperature, humidity, and growth-stage suitability per crop-disease pair (bell-curve and ramp functions), replacing a rigid binary rule like `humidity > 90% → HIGH`, averaged over a rolling 24-hour window since disease risk builds from sustained conditions.
+**What it is:** The engine behind Crop Watch (Architecture §3.7). The **backbone** is a weighted crop-stress score — each weather parameter (temperature, humidity, soil moisture, rainfall) scored 0–1 against that crop's curated optimal range, weighted `0.35·T + 0.25·H + 0.25·M + 0.15·R`, inverted to a 0–100 risk and mapped to a band. It's **fail-soft** (renormalize weights when a parameter is missing; soil moisture is best-effort from Open-Meteo) and averaged over a rolling ~24h window. **Disease suitability** contributes as one *explained* component: a per-crop key-disease rule (continuous, not a rigid `humidity > 90%` threshold) that adds the "disease" threat when conditions favour it.
 
-**Why it's worth building:** A binary threshold is a poor model of biology — 88% humidity can still be risky, and 92% isn't dangerous if the temperature is wrong. Worse, a single "humidity is bad" rule is actively wrong-direction for diseases like soybean charcoal rot or cotton leaf curl virus, which are favored by hot, *dry* conditions. This model is the concrete technical depth behind the Crop Risk Index gauge — the single most visually distinctive artifact in the product.
+**Why it's worth building:** The weakest parameter names the problem, so every warning is explained rather than a black-box gauge — that explainability is the point. And continuous disease scoring beats a binary threshold biologically: 88% humidity can still be risky, 92% isn't if the temperature is wrong, and a single "humidity is bad" rule is actively wrong-direction for hot-*dry*-favoured problems like soybean charcoal rot or cotton leaf-curl virus. This is the concrete technical depth behind the Crop Risk Index gauge — the most visually distinctive artifact in the product.
 
 **Feasibility:** Medium-to-high effort. The math itself is simple (still arithmetic, not ML), but sourcing real optimal-temperature and humidity-threshold numbers per crop-disease pair from ICAR's Plant Protection advisories is genuine research work, and getting these numbers wrong matters more than most other sourcing tasks in this project because it shapes advice a farmer might act on directly.
 
