@@ -5,11 +5,12 @@ import Disaster from './pages/Disaster'
 import CropWatch from './pages/CropWatch'
 import CropPlanning from './pages/CropPlanning'
 import Chat from './pages/Chat'
+import Settings from './pages/Settings'
 import BottomNav from './components/BottomNav'
 
 function getPageFromHash() {
   const page = window.location.hash.replace('#', '').split('?')[0]
-  return ['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch', 'chat'].includes(page) ? page : 'home'
+  return ['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch', 'chat', 'settings'].includes(page) ? page : 'home'
 }
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
   if (page === 'farmer/planning') return <CropPlanning />
   if (page === 'farmer/watch') return <CropWatch />
   if (page === 'chat') return <Chat />
+  if (page === 'settings') return <Settings />
 
   let currentPage
 
