@@ -476,11 +476,19 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 
 `POST /chat`
 ```json
-// Request
-{ "query": "will it rain tomorrow in Delhi?", "language": "en", "user_id": "usr_123" }
-// Response
+// Request — context_location + history are OPTIONAL (multi-turn support, added
+// Sprint 2). context_location is the place the conversation carries forward (last
+// resolved location or the user's default) so a location-less follow-up resolves
+// instead of dead-ending; history is the recent turns for phrasing coherence.
+{ "query": "will it rain tomorrow in Delhi?", "language": "en", "user_id": "usr_123",
+  "context_location": "Delhi",
+  "history": [ { "role": "user", "content": "weather in Delhi" },
+               { "role": "assistant", "content": "It's 27°C, clear sky." } ] }
+// Response — `location` (added Sprint 2) echoes the resolved place so the client
+// can carry it forward on the next turn.
 { "answer": "Yes — 68% chance of rain tomorrow evening in Delhi.",
-  "data_tier": "exact", "source": "Open-Meteo", "query_class": "realtime", "audio_url": null }
+  "data_tier": "exact", "source": "Open-Meteo", "query_class": "realtime",
+  "audio_url": null, "location": "Delhi" }
 ```
 
 `GET/POST /farmer/profile`

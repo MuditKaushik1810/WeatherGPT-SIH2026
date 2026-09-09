@@ -64,10 +64,21 @@ def home(location_name: str):
     return get_home_view(location_name)
 
 
+class ChatTurn(BaseModel):
+    role: str        # "user" | "assistant"
+    content: str
+
+
 class ChatRequest(BaseModel):
     query: str
     language: str = "en"
     user_id: str | None = None
+    # Multi-turn context (both optional, backward-compatible): the location the
+    # client carries forward (last resolved place or the user's default) so a
+    # location-less follow-up still resolves, and the recent conversation turns
+    # for phrasing coherence.
+    context_location: str | None = None
+    history: list[ChatTurn] | None = None
 
 
 @app.post("/chat")
@@ -77,6 +88,13 @@ def chat(request: ChatRequest):
     intent extraction → degradation-ladder retrieval → grounding assembler → LLM
     answer (rephrasing only the grounded facts). Never bare-refuses — if the LLM
     is unavailable it returns a deterministic grounded answer. Returns
-    {answer, data_tier, source, query_class, audio_url}.
+    {answer, data_tier, source, query_class, audio_url, location}.
     """
-    return answer_query(request.query, request.language, request.user_id)
+    history = [turn.model_dump() for turn in request.history] if request.history else None
+    return answer_query(
+        request.query,
+        request.language,
+        request.user_id,
+        context_location=request.context_location,
+        history=history,
+    )

@@ -43,7 +43,9 @@ it('sends a clicked suggestion to the chat endpoint', async () => {
   fireEvent.click(first)
 
   expect(await screen.findByText(/Clear skies/)).toBeInTheDocument()
-  expect(fetchChatAnswer).toHaveBeenCalledWith(first.textContent, 'en')
+  // Localized label doubles as the (English) query in English mode; context is
+  // empty on the first turn.
+  expect(fetchChatAnswer).toHaveBeenCalledWith(first.textContent, 'en', { contextLocation: null, history: [] })
 })
 
 it('sends the selected language to the chat endpoint', async () => {
@@ -62,7 +64,7 @@ it('sends the selected language to the chat endpoint', async () => {
   fireEvent.click(sendButton)
 
   expect(await screen.findByText(/साफ आसमान/)).toBeInTheDocument()
-  expect(fetchChatAnswer).toHaveBeenCalledWith('weather in Delhi', 'hi')
+  expect(fetchChatAnswer).toHaveBeenCalledWith('weather in Delhi', 'hi', { contextLocation: null, history: [] })
 })
 
 it('sends a typed question and shows the grounded answer with provenance', async () => {
@@ -88,4 +90,58 @@ it('never bare-refuses — shows a friendly fallback if the service is unreachab
   fireEvent.click(screen.getByRole('button', { name: /^Send$/ }))
 
   expect(await screen.findByText(/couldn't reach the weather service/i)).toBeInTheDocument()
+})
+
+function seedSession(messages, lastLocation = 'Delhi') {
+  localStorage.setItem('weathergpt.chatSession', JSON.stringify({
+    messages, lastLocation, savedAt: Date.now(),
+  }))
+}
+
+it('restores the previous conversation on mount (within a day)', () => {
+  seedSession([
+    { id: 1, role: 'user', text: 'weather in Delhi' },
+    { id: 2, role: 'assistant', text: 'It is 31°C in Delhi.', source: 'WeatherAPI', dataTier: 'exact' },
+  ])
+  render(<Chat />)
+  // The old turns are shown, and the empty-state suggestions are not.
+  expect(screen.getByText('weather in Delhi')).toBeInTheDocument()
+  expect(screen.getByText(/It is 31°C in Delhi/)).toBeInTheDocument()
+  expect(screen.queryByText(/ask me about the weather/i)).not.toBeInTheDocument()
+})
+
+it('carries the last location as context on a follow-up', async () => {
+  seedSession([
+    { id: 1, role: 'user', text: 'weather in Delhi' },
+    { id: 2, role: 'assistant', text: 'It is 31°C in Delhi.', source: 'WeatherAPI', dataTier: 'exact' },
+  ], 'Delhi')
+  fetchChatAnswer.mockResolvedValue({
+    answer: 'Tomorrow: high 34°C.', data_tier: 'exact', source: 'WeatherAPI',
+    query_class: 'realtime', audio_url: null, location: 'Delhi',
+  })
+  render(<Chat />)
+
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'what about tomorrow?' } })
+  fireEvent.click(screen.getByRole('button', { name: /^Send$/ }))
+
+  await screen.findByText(/Tomorrow: high 34/)
+  expect(fetchChatAnswer).toHaveBeenCalledWith('what about tomorrow?', 'en', {
+    contextLocation: 'Delhi',
+    history: [
+      { role: 'user', content: 'weather in Delhi' },
+      { role: 'assistant', content: 'It is 31°C in Delhi.' },
+    ],
+  })
+})
+
+it('starts a fresh conversation with New chat', () => {
+  seedSession([{ id: 1, role: 'user', text: 'weather in Delhi' }])
+  render(<Chat />)
+  expect(screen.getByText('weather in Delhi')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
+
+  expect(screen.queryByText('weather in Delhi')).not.toBeInTheDocument()
+  expect(screen.getByText(/ask me about the weather/i)).toBeInTheDocument()
+  expect(localStorage.getItem('weathergpt.chatSession')).toBeNull()
 })
