@@ -4,23 +4,25 @@ import WeatherPostcard from '../components/WeatherPostcard'
 import RecommendationCard from '../components/RecommendationCard'
 import HourlyForecast from '../components/HourlyForecast'
 import WeatherGPTCard from '../components/WeatherGPTCard'
+import FloatingChatButton from '../components/FloatingChatButton'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation, saveLocation } from '../lib/savedLocation'
 
+const openChat = () => { window.location.hash = 'chat' }
+
 function Home() {
-  const [chatOpen, setChatOpen] = useState(false)
   const [location, setLocation] = useState(() => getSavedLocation())
   const [input, setInput] = useState(location ?? '')
   const [status, setStatus] = useState('idle') // idle | loading | success | error
   const [data, setData] = useState(null)
+  const [updatedAt, setUpdatedAt] = useState(null) // when real weather last loaded
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!location) return undefined
 
     // `active` guards against a slower earlier request resolving after a newer
-    // one (fast re-submits, or React StrictMode's dev double-invoke) and
-    // clobbering the fresher result.
+    // one (fast re-submits, or React StrictMode's dev double-invoke).
     let active = true
     setStatus('loading')
     fetchHomeView(location)
@@ -28,8 +30,14 @@ function Home() {
         if (!active) return
         setData(view)
         setStatus('success')
-        // Only remember a location we could actually resolve — don't persist typos.
-        if (view.data_tier !== 'unresolved_location') saveLocation(location)
+        // Only remember a location we could resolve, and only stamp "updated"
+        // when we actually got real weather (not a gap).
+        if (view.data_tier !== 'unresolved_location') {
+          saveLocation(location)
+          setUpdatedAt(Date.now())
+        } else {
+          setUpdatedAt(null)
+        }
       })
       .catch(() => {
         if (active) setStatus('error')
@@ -47,20 +55,23 @@ function Home() {
     if (name === location) {
       setReloadKey((key) => key + 1) // same name — force a refetch
     } else {
-      setLocation(name) // `load` (the effect) persists it only once it resolves
+      setLocation(name)
     }
   }
 
   const retry = () => setReloadKey((key) => key + 1)
 
-  // Backend resolved the request but couldn't geocode the name — prompt a retype
-  // rather than showing an all-"—" card.
   const notFound = status === 'success' && data?.data_tier === 'unresolved_location'
 
   return (
     <main className="app-shell">
       <div className="home-page">
-        <Header location={location ?? 'Set your location'} />
+        <Header
+          location={location ?? 'Set your location'}
+          updatedAt={updatedAt}
+          loading={status === 'loading'}
+          onReload={retry}
+        />
 
         <form className="location-bar" onSubmit={submitLocation}>
           <input
@@ -106,13 +117,13 @@ function Home() {
             </>
           )}
 
-          <WeatherGPTCard onOpenChat={() => setChatOpen(true)} />
+          <WeatherGPTCard onOpenChat={openChat} />
         </section>
       </div>
+
+      <FloatingChatButton />
     </main>
   )
 }
 
 export default Home
-
-
