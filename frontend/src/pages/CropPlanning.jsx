@@ -1,10 +1,41 @@
-import farmerCropPlanning from '../mocks/farmerCropPlanning.json'
+import { useEffect, useState } from 'react'
+import { fetchCropPlanning } from '../api/cropPlanning'
+import { setPersona } from '../lib/preferences'
 
 function goTo(hash) {
   window.location.hash = hash
 }
 
+// Leaving Farmer Mode switches the persona back to normal (persisted).
+function exitFarmerMode() {
+  setPersona('normal')
+  goTo('#home')
+}
+
 export default function CropPlanning() {
+  // Data comes through the api module (demo fixture today, real GET
+  // /farmer/crop-planning later — §3.10). The screen is built against that stable
+  // shape, so the fixture→backend swap needs no changes here.
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    fetchCropPlanning()
+      .then((view) => { if (active) setData(view) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
+
+  if (!data) {
+    return (
+      <main className="app-shell farmer-shell">
+        <section className="farmer-page">
+          <p className="farmer-demo-note" role="status">Loading crop suggestions…</p>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell farmer-shell">
       <section className="farmer-page">
@@ -25,7 +56,8 @@ export default function CropPlanning() {
           <button
             className="farmer-mode-switch"
             type="button"
-            onClick={() => goTo('#home')}
+            onClick={exitFarmerMode}
+            aria-label="Switch to normal WeatherGPT mode"
           >
             Farmer Mode
           </button>
@@ -41,7 +73,7 @@ export default function CropPlanning() {
 
           <div className="farmer-location-content">
             <span>Current location</span>
-            <strong>{farmerCropPlanning.location}</strong>
+            <strong>{data.location}</strong>
           </div>
         </section>
 
@@ -76,7 +108,7 @@ export default function CropPlanning() {
           </div>
 
           <div className="crop-recommendation-list">
-            {farmerCropPlanning.recommendations.map((crop, index) => (
+            {data.recommendations.map((crop, index) => (
               <article
                 className={`crop-recommendation-item ${
                   index === 0 ? 'featured' : ''
@@ -109,15 +141,15 @@ export default function CropPlanning() {
 
             <div>
               <h2>Climate fit</h2>
-              <p>{farmerCropPlanning.season} season</p>
+              <p>{data.season} season</p>
             </div>
           </div>
 
-          <p>{farmerCropPlanning.climate_context.summary}</p>
+          <p>{data.climate_context.summary}</p>
 
           <div className="historical-climate-note">
             <strong>Historical climate</strong>
-            <span>{farmerCropPlanning.climate_context.historical_note}</span>
+            <span>{data.climate_context.historical_note}</span>
           </div>
         </section>
 

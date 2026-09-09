@@ -106,6 +106,7 @@ const en = {
   'settings.placeholderFarm': 'e.g. Karnal, Haryana',
 
   'chat.newChat': 'New chat',
+  'menu.farmerMode': 'Switch to Farmer Mode',
   'suggest.rainTomorrow': 'Will it rain in {loc} tomorrow?',
   'suggest.airQuality': "How's the air quality in {loc} right now?",
   'suggest.weekend': "What's the weekend forecast for {loc}?",
@@ -209,6 +210,7 @@ const hi = {
   'settings.placeholderFarm': 'जैसे करनाल, हरियाणा',
 
   'chat.newChat': 'नई चैट',
+  'menu.farmerMode': 'किसान मोड पर जाएँ',
   'suggest.rainTomorrow': 'क्या {loc} में कल बारिश होगी?',
   'suggest.airQuality': '{loc} में अभी हवा की गुणवत्ता कैसी है?',
   'suggest.weekend': '{loc} के लिए सप्ताहांत का पूर्वानुमान क्या है?',
@@ -312,6 +314,7 @@ const bn = {
   'settings.placeholderFarm': 'যেমন কার্নাল, হরিয়ানা',
 
   'chat.newChat': 'নতুন চ্যাট',
+  'menu.farmerMode': 'ফার্মার মোডে যান',
   'suggest.rainTomorrow': 'আগামীকাল {loc}-এ কি বৃষ্টি হবে?',
   'suggest.airQuality': '{loc}-এ এখন বাতাসের গুণমান কেমন?',
   'suggest.weekend': '{loc}-এর সপ্তাহান্তের পূর্বাভাস কী?',
@@ -415,6 +418,7 @@ const ta = {
   'settings.placeholderFarm': 'எ.கா. கர்னால், ஹரியானா',
 
   'chat.newChat': 'புதிய அரட்டை',
+  'menu.farmerMode': 'விவசாயி பயன்முறைக்கு மாறு',
   'suggest.rainTomorrow': 'நாளை {loc}-இல் மழை பெய்யுமா?',
   'suggest.airQuality': '{loc}-இல் இப்போது காற்றின் தரம் எப்படி உள்ளது?',
   'suggest.weekend': '{loc}-க்கான வார இறுதி முன்னறிவிப்பு என்ன?',
@@ -518,6 +522,7 @@ const mr = {
   'settings.placeholderFarm': 'उदा. कर्नाल, हरियाणा',
 
   'chat.newChat': 'नवीन चॅट',
+  'menu.farmerMode': 'शेतकरी मोडवर जा',
   'suggest.rainTomorrow': 'उद्या {loc} मध्ये पाऊस पडेल का?',
   'suggest.airQuality': '{loc} मध्ये आत्ता हवेची गुणवत्ता कशी आहे?',
   'suggest.weekend': '{loc} साठी आठवड्याच्या शेवटचा अंदाज काय आहे?',
@@ -621,6 +626,7 @@ const pa = {
   'settings.placeholderFarm': 'ਜਿਵੇਂ ਕਰਨਾਲ, ਹਰਿਆਣਾ',
 
   'chat.newChat': 'ਨਵੀਂ ਚੈਟ',
+  'menu.farmerMode': 'ਕਿਸਾਨ ਮੋਡ ਉੱਤੇ ਜਾਓ',
   'suggest.rainTomorrow': 'ਕੀ ਕੱਲ੍ਹ {loc} ਵਿੱਚ ਮੀਂਹ ਪਵੇਗਾ?',
   'suggest.airQuality': '{loc} ਵਿੱਚ ਹੁਣ ਹਵਾ ਦੀ ਗੁਣਵੱਤਾ ਕਿਹੋ ਜਿਹੀ ਹੈ?',
   'suggest.weekend': '{loc} ਲਈ ਹਫ਼ਤੇ ਦੇ ਅੰਤ ਦਾ ਅਨੁਮਾਨ ਕੀ ਹੈ?',

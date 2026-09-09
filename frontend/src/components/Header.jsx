@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
+import { setPersona } from '../lib/preferences'
 
 // "Updated just now" was misleading — the weather isn't re-fetched every second.
 // Show how long ago the data was actually fetched, refreshed live, and give the
@@ -16,6 +17,7 @@ function formatRelative(ts, t) {
 function Header({ location, updatedAt = null, loading = false, onReload }) {
   const { t } = useI18n()
   const [, setTick] = useState(0)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Re-render every 30s so the relative "updated" label stays truthful.
   useEffect(() => {
@@ -26,13 +28,55 @@ function Header({ location, updatedAt = null, loading = false, onReload }) {
 
   const showReload = Boolean(updatedAt) || loading
 
+  // Enter the farmer persona (a separate mode, not a tab). Persist it so the app
+  // reopens into Farmer Mode, and land on Crop Watch — its internal nav takes over.
+  const enterFarmerMode = () => {
+    setPersona('farmer')
+    setMenuOpen(false)
+    window.location.hash = 'farmer/watch'
+  }
+
+  const openSettings = () => {
+    setMenuOpen(false)
+    window.location.hash = 'settings'
+  }
+
   return (
     <header className="header">
-      <button className="icon-button" type="button" aria-label={t('header.menu')} title={t('header.menu')} onClick={() => { window.location.hash = 'settings' }}>
-        <span className="hamburger-line" />
-        <span className="hamburger-line" />
-        <span className="hamburger-line" />
-      </button>
+      <div className="header-menu-wrap">
+        <button
+          className="icon-button"
+          type="button"
+          aria-label={t('header.menu')}
+          title={t('header.menu')}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+        </button>
+
+        {menuOpen && (
+          <>
+            <button
+              type="button"
+              className="header-menu-overlay"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="header-menu" role="menu">
+              <button type="button" role="menuitem" className="header-menu-item" onClick={enterFarmerMode}>
+                <span aria-hidden="true">🌾</span> {t('menu.farmerMode')}
+              </button>
+              <button type="button" role="menuitem" className="header-menu-item" onClick={openSettings}>
+                <span aria-hidden="true">⚙</span> {t('settings.title')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="location-block">
         <div className="location-row">
