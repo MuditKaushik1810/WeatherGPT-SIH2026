@@ -1,0 +1,55 @@
+{
+  "data_tier": "demo",
+  "source": "Frontend demo fixture",
+  "location": "Noida, Uttar Pradesh",
+  "crop": "Wheat",
+  "days_after_sowing": 48,
+  "crop_stage": "Vegetative",
+  "next_stage": "Flowering",
+  "risk_score": 62,
+  "risk_level": "Moderate",
+  "threats": [
+    {
+      "id": "hail",
+      "label": "Hail",
+      "level": "Moderate",
+      "detail": "Possible risk in the next 48 hours"
+    },
+    {
+      "id": "disease",
+      "label": "Disease",
+      "level": "High",
+      "detail": "Conditions may favour fungal disease"
+    },
+    {
+      "id": "heat",
+      "label": "Heat Stress",
+      "level": "Low",
+      "detail": "No immediate concern"
+    },
+    {
+      "id": "rain",
+      "label": "Heavy Rain",
+      "level": "Low",
+      "detail": "Low chance in the next 3 days"
+    }
+  ],
+  "recommended_action": {
+    "title": "Protect your crop from possible hail",
+    "items": [
+      "Avoid irrigation immediately before the risk period",
+      "Check crop support structures",
+      "Monitor local weather alerts"
+    ]
+  },
+  "climate_context": {
+    "title": "El Niño influence",
+    "level": "Moderate",
+    "detail": "May affect seasonal rainfall patterns in your region."
+  },
+  "risk_basis": {
+    "disease_suitability": 0.72,
+    "extreme_weather_proximity": 0.4,
+    "historical_baseline_deviation": 0.18
+  }
+}

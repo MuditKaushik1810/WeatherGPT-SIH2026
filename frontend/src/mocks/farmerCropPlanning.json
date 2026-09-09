@@ -1,0 +1,36 @@
+{
+  "data_tier": "demo",
+  "source": "Frontend demo fixture",
+  "location": "Noida, Uttar Pradesh",
+  "season": "Rabi",
+  "climate_context": {
+    "summary": "Cooler winter conditions are generally suitable for Rabi crops in this region.",
+    "historical_note": "Based on typical seasonal conditions for the Noida region."
+  },
+  "recommendations": [
+    {
+      "crop": "Wheat",
+      "suitability": "Excellent",
+      "reason": "Well suited to the cool Rabi season and local growing conditions.",
+      "harvest_window": "March–April"
+    },
+    {
+      "crop": "Mustard",
+      "suitability": "Excellent",
+      "reason": "Performs well during the cooler months and fits the local Rabi climate.",
+      "harvest_window": "February–March"
+    },
+    {
+      "crop": "Peas",
+      "suitability": "Good",
+      "reason": "Suitable for cool temperatures and commonly grown during the Rabi season.",
+      "harvest_window": "January–March"
+    },
+    {
+      "crop": "Potato",
+      "suitability": "Good",
+      "reason": "Cool seasonal temperatures provide suitable conditions for potato cultivation.",
+      "harvest_window": "January–March"
+    }
+  ]
+}
