@@ -56,3 +56,29 @@ def test_gemini_http_error_fails_soft_to_none(mock_post, monkeypatch):
     mock_post.side_effect = requests.exceptions.HTTPError("429")
     # No Groq key, so the fallback also yields None — still no raise.
     assert llm.complete("sys", "user") is None
+
+
+@patch("app.connectors.llm.requests.post")
+def test_gemini_uses_header_auth_and_disables_thinking(mock_post, monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-key")
+    mock_post.return_value.raise_for_status.return_value = None
+    mock_post.return_value.json.return_value = {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
+
+    llm.complete("sys", "user")
+
+    _, kwargs = mock_post.call_args
+    assert kwargs["headers"]["x-goog-api-key"] == "secret-key"   # key in header, not URL
+    assert "key" not in (kwargs.get("params") or {})
+    assert kwargs["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
+
+
+@patch("app.connectors.llm.requests.post")
+def test_gemini_empty_text_fails_soft_to_none(mock_post, monkeypatch):
+    # A 200 with no answer text (e.g. thinking exhausted the budget) must degrade,
+    # not be treated as a valid empty answer.
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    mock_post.return_value.raise_for_status.return_value = None
+    mock_post.return_value.json.return_value = {
+        "candidates": [{"content": {"parts": []}, "finishReason": "MAX_TOKENS"}]
+    }
+    assert llm.complete("sys", "user") is None

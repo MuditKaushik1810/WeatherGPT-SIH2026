@@ -24,8 +24,9 @@ logger = logging.getLogger(__name__)
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Free-tier defaults; overridable via env if a model name changes.
-_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+# Free-tier defaults; overridable via env. Default to the always-latest Flash
+# (Flash line = free-tier friendly; "latest" tracks the newest release).
+_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 _GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
@@ -36,18 +37,36 @@ def _try_gemini(system: str, user: str, temperature: float, max_tokens: int) -> 
     try:
         resp = requests.post(
             GEMINI_URL.format(model=_GEMINI_MODEL),
-            params={"key": api_key},
+            # Key as a header, not a query param, so it never lands in logged URLs.
+            headers={"x-goog-api-key": api_key},
             json={
                 "system_instruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": user}]}],
-                "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                    # This is a grounded rephrase, not a reasoning task — disable
+                    # "thinking" so Flash models spend their budget on the ANSWER,
+                    # not internal thought (which otherwise returns empty text).
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
             },
-            timeout=20,
+            timeout=30,
         )
         resp.raise_for_status()
-        parts = resp.json()["candidates"][0]["content"]["parts"]
+        data = resp.json()
+        candidates = data.get("candidates") or []
+        if not candidates:
+            # e.g. the whole prompt was safety-blocked — surface it, don't fail silent.
+            logger.warning("Gemini returned no candidates: %s", str(data)[:300])
+            return None
+        parts = candidates[0].get("content", {}).get("parts", [])
         text = "".join(p.get("text", "") for p in parts).strip()
-        return text or None
+        if not text:
+            logger.warning("Gemini returned empty text (finishReason=%s)",
+                           candidates[0].get("finishReason"))
+            return None
+        return text
     except Exception as exc:
         logger.warning("Gemini generation failed: %r", exc)
         return None
@@ -80,7 +99,7 @@ def _try_groq(system: str, user: str, temperature: float, max_tokens: int) -> st
         return None
 
 
-def complete(system: str, user: str, *, temperature: float = 0.3, max_tokens: int = 500) -> str | None:
+def complete(system: str, user: str, *, temperature: float = 0.3, max_tokens: int = 1024) -> str | None:
     """
     Generate a completion from the primary LLM, falling back to the secondary.
 
