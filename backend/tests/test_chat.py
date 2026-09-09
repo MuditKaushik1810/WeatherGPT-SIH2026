@@ -92,3 +92,27 @@ def test_chat_endpoint_returns_contract_shape(mock_llm, mock_get_weather):
     assert set(body) == {"answer", "data_tier", "source", "query_class", "audio_url"}
     assert body["answer"] == "31.9°C, light rain in Delhi."
     assert body["query_class"] == "realtime"
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.core.forecast.get_daily_forecast")
+@patch("app.connectors.llm.complete", return_value=None)
+def test_answer_query_future_uses_forecast_not_current_conditions(mock_llm, mock_fc, mock_gw):
+    mock_fc.return_value = {
+        "location": "Delhi", "source": "WeatherAPI", "data_tier": "exact", "fetched_at": "x",
+        "days": [{
+            "offset": 1, "label": "Tomorrow", "date": "2026-09-10", "peak_temp": 34.0,
+            "low_temp": 27.0, "peak_feels_like": 37.0, "max_precip_chance": 0.7,
+            "max_wind": 15.0, "condition": "Patchy rain",
+        }],
+        "message": None,
+    }
+    result = chat.answer_query("will it rain in Delhi tomorrow?")
+
+    mock_gw.assert_not_called()          # future query -> forecast path, not current conditions
+    mock_fc.assert_called_once()
+    assert result["data_tier"] == "exact"
+    assert "Forecast for Delhi" in result["answer"]      # framed as forecast, not current
+    assert "Current conditions" not in result["answer"]
+    assert "Tomorrow" in result["answer"]
+    assert "70% chance of rain" in result["answer"]

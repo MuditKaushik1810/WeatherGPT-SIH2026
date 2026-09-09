@@ -91,58 +91,74 @@ def extract_hourly_forecast(raw_hourly: dict | None, hours: int = 8, start: int 
     return forecast
 
 
-def summarize_today(raw_hourly: dict | None) -> dict:
+def summarize_day(raw_hourly: dict | None, target_date: str | None = None) -> dict:
     """
-    Compute today's forecast extremes from Open-Meteo's raw hourly arrays, over
-    the hours that share the calendar date of the first entry (Open-Meteo returns
-    the hourly series in local time starting at 00:00, so this is "calendar
-    today"). The recommendation engine uses these so safety advice can look
-    ahead to the day's peak, not just the current hour.
+    Summarize ONE calendar day's forecast from the raw hourly arrays.
 
-    Returns {peak_temp, low_temp, peak_feels_like, max_precip_chance, max_wind},
-    each None when its series is missing. All-None when raw_hourly is missing
-    (source failed soft) — never raises.
+    `target_date` is a "YYYY-MM-DD" string; when None it defaults to the date of
+    the first hourly entry ("today" in the series' local time — the original
+    summarize_today behaviour). Returns {date, peak_temp, low_temp,
+    peak_feels_like, max_precip_chance, max_wind, condition}, each None when its
+    series is missing. All-None (with the date) when raw_hourly is missing or the
+    date isn't in the series — never raises.
+
+    Works for both connectors' _raw_hourly: the numeric fields are shared, and
+    `condition` comes from `condition_text` (WeatherAPI) when present, else the
+    WMO `weathercode` map (Open-Meteo).
     """
     empty = {
-        "peak_temp": None,
-        "low_temp": None,
-        "peak_feels_like": None,
-        "max_precip_chance": None,
-        "max_wind": None,
+        "date": target_date, "peak_temp": None, "low_temp": None,
+        "peak_feels_like": None, "max_precip_chance": None, "max_wind": None,
+        "condition": None,
     }
     if not raw_hourly:
         return empty
-
     times = raw_hourly.get("time", [])
     if not times:
         return empty
 
-    today = times[0][:10]  # calendar date of the first entry (YYYY-MM-DD)
+    day = target_date or times[0][:10]
+    idxs = [i for i, t in enumerate(times) if t[:10] == day]
+    if not idxs:
+        return {**empty, "date": day}
+
     temp_arr = raw_hourly.get("temperature_2m", [])
     feels_arr = raw_hourly.get("apparent_temperature", [])
     prec_arr = raw_hourly.get("precipitation_probability", [])
     wind_arr = raw_hourly.get("wind_speed_10m", [])
+    code_arr = raw_hourly.get("weathercode", [])
+    text_arr = raw_hourly.get("condition_text", [])
 
-    temps, feels, precs, winds = [], [], [], []
-    for i, when in enumerate(times):
-        if when[:10] != today:
-            break  # series is chronological; once past today, stop
-        if i < len(temp_arr) and temp_arr[i] is not None:
-            temps.append(temp_arr[i])
-        if i < len(feels_arr) and feels_arr[i] is not None:
-            feels.append(feels_arr[i])
-        if i < len(prec_arr) and prec_arr[i] is not None:
-            precs.append(prec_arr[i])
-        if i < len(wind_arr) and wind_arr[i] is not None:
-            winds.append(wind_arr[i])
+    def vals(arr):
+        return [arr[i] for i in idxs if i < len(arr) and arr[i] is not None]
+
+    temps, feels, precs, winds = vals(temp_arr), vals(feels_arr), vals(prec_arr), vals(wind_arr)
+
+    # Representative condition: the hour with the highest precip chance (the most
+    # "notable" weather of the day), falling back to the middle of the day.
+    precs_by_idx = [(i, prec_arr[i]) for i in idxs if i < len(prec_arr) and prec_arr[i] is not None]
+    focus = max(precs_by_idx, key=lambda p: p[1])[0] if precs_by_idx else idxs[len(idxs) // 2]
+    if focus < len(text_arr) and text_arr[focus] is not None:
+        condition = text_arr[focus]
+    elif focus < len(code_arr):
+        condition = WEATHER_CODE_MAP.get(code_arr[focus], "unknown")
+    else:
+        condition = None
 
     return {
+        "date": day,
         "peak_temp": max(temps) if temps else None,
         "low_temp": min(temps) if temps else None,
         "peak_feels_like": max(feels) if feels else None,
         "max_precip_chance": max(precs) / 100 if precs else None,
         "max_wind": max(winds) if winds else None,
+        "condition": condition,
     }
+
+
+def summarize_today(raw_hourly: dict | None) -> dict:
+    """Back-compat wrapper: summarize the first (current) day in the series."""
+    return summarize_day(raw_hourly, None)
 
 
 def _unavailable_record() -> dict:

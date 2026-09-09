@@ -91,6 +91,76 @@ def _facts_from_record(record: dict) -> list[str]:
     return facts
 
 
+_FORECAST_TIER_NOTES = {
+    "exact": "Forecast for the requested day(s).",
+    "source_unavailable": "The live forecast is temporarily unavailable.",
+    "unresolved_location": "The location could not be resolved, so no forecast was retrieved.",
+}
+
+
+def _forecast_day_fact(day: dict) -> str:
+    """One grounded line per forecast day — only the parts that are present."""
+    parts = []
+    if day.get("condition"):
+        parts.append(str(day["condition"]))
+    peak, low = day.get("peak_temp"), day.get("low_temp")
+    if peak is not None and low is not None:
+        parts.append(f"high {_round(peak)}°C, low {_round(low)}°C")
+    elif peak is not None:
+        parts.append(f"around {_round(peak)}°C")
+    if day.get("max_precip_chance") is not None:
+        parts.append(f"up to {round(day['max_precip_chance'] * 100)}% chance of rain")
+    if day.get("max_wind") is not None:
+        parts.append(f"wind up to {_round(day['max_wind'])} km/h")
+    head = f"{day.get('label', 'That day')} ({day.get('date')})"
+    return f"{head}: " + ", ".join(parts) if parts else f"{head}: no details available"
+
+
+def build_forecast_context(forecast_record: dict, query_class: str = "realtime") -> dict:
+    """
+    Grounding context for a FUTURE-dated query — same output shape as
+    build_grounding_context, but the facts are per-day forecast summaries (from
+    forecast.get_daily_forecast) rather than current conditions. Same invariants:
+    only the retrieved days are grounded, and an empty forecast still yields an
+    honest block + guidance rather than a bare refusal.
+    """
+    tier = forecast_record.get("data_tier", "source_unavailable")
+    days = forecast_record.get("days") or []
+    facts = [_forecast_day_fact(d) for d in days]
+    tier_note = _FORECAST_TIER_NOTES.get(tier, _FORECAST_TIER_NOTES["source_unavailable"])
+    gap_guidance = forecast_record.get("message") if (not facts or tier != "exact") else None
+
+    location = forecast_record.get("location")
+    lines = [f"LOCATION: {location}" if location else "LOCATION: (unresolved)"]
+    lines.append(f"DATA TIER: {tier} — {tier_note}")
+    if forecast_record.get("source"):
+        lines.append(f"SOURCE: {forecast_record['source']}")
+    lines.append("")
+    if facts:
+        lines.append("FORECAST:")
+        lines.extend(f"- {f}" for f in facts)
+    else:
+        lines.append("FORECAST: (none could be retrieved)")
+    if gap_guidance:
+        lines.append("")
+        lines.append(f"GUIDANCE: {gap_guidance}")
+
+    return {
+        "location": location,
+        "query_class": query_class,
+        "kind": "forecast",
+        "data_tier": tier,
+        "source": forecast_record.get("source"),
+        "fetched_at": forecast_record.get("fetched_at"),
+        "facts": facts,
+        "tier_note": tier_note,
+        "constraints": list(GROUNDING_CONSTRAINTS),
+        "answerable": bool(facts),
+        "gap_guidance": gap_guidance,
+        "context_block": "\n".join(lines),
+    }
+
+
 def build_grounding_context(record: dict, query_class: str = "realtime") -> dict:
     """
     Assemble the grounding context for the answer-generation step.
@@ -153,6 +223,7 @@ def build_grounding_context(record: dict, query_class: str = "realtime") -> dict
     return {
         "location": location,
         "query_class": query_class,
+        "kind": "current",
         "data_tier": tier,
         "source": record.get("source"),
         "fetched_at": record.get("fetched_at"),
