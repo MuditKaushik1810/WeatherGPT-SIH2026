@@ -116,3 +116,30 @@ def test_answer_query_future_uses_forecast_not_current_conditions(mock_llm, mock
     assert "Current conditions" not in result["answer"]
     assert "Tomorrow" in result["answer"]
     assert "70% chance of rain" in result["answer"]
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete")
+def test_answer_query_caches_settled_answers(mock_llm, mock_gw):
+    mock_gw.return_value = _exact_record()
+    mock_llm.return_value = "Cached answer."
+
+    chat.answer_query("weather in Delhi")
+    chat.answer_query("weather in Delhi")
+
+    mock_gw.assert_called_once()   # second identical query served from cache
+    mock_llm.assert_called_once()
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete", return_value=None)
+def test_answer_query_does_not_cache_a_source_unavailable_answer(mock_llm, mock_gw):
+    mock_gw.return_value = {
+        "location": "Delhi", "temp": None, "condition": None, "precipitation_chance": None,
+        "humidity": None, "feels_like": None, "wind_speed": None, "aqi": None, "warnings": [],
+        "source": None, "data_tier": "source_unavailable", "fetched_at": None, "message": "down",
+    }
+    chat.answer_query("weather in Delhi")
+    chat.answer_query("weather in Delhi")
+
+    assert mock_gw.call_count == 2   # a "live is down" answer is re-tried, not cached

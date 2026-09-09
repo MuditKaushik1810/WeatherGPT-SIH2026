@@ -13,7 +13,11 @@ back to a deterministic answer built straight from the grounded facts — so the
 endpoint never bare-refuses, with or without an LLM key configured.
 """
 from app.connectors import llm
-from app.core import degradation_ladder, forecast, grounding, intent
+from app.core import cache, degradation_ladder, forecast, grounding, intent
+
+# Chat answers embed live weather, so cache them only briefly — long enough to
+# spare repeated LLM calls for the same question, short enough to stay current.
+_CHAT_TTL_SECONDS = 300
 
 # Future-dated queries pull the forecast for these day offsets instead of current
 # conditions (0 = today, 1 = tomorrow). Kept small — the free forecast tier is
@@ -98,6 +102,11 @@ def answer_query(query: str, language: str = "en", user_id: str | None = None) -
     {answer, data_tier, source, query_class, audio_url}. `audio_url` is None —
     voice output is a browser-side (Web Speech) concern, added later.
     """
+    cache_key = f"chat:{language}:{query.strip().lower()}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
     parsed = intent.extract_intent(query)
     location = parsed["location"]
     query_class = parsed["query_class"]
@@ -114,10 +123,15 @@ def answer_query(query: str, language: str = "en", user_id: str | None = None) -
 
     answer = generate_answer(ctx, query, language)
 
-    return {
+    result = {
         "answer": answer,
         "data_tier": ctx["data_tier"],
         "source": ctx["source"],
         "query_class": query_class,
         "audio_url": None,
     }
+    # Cache only settled tiers — a "live is down" state (source_unavailable) or an
+    # unresolved location is re-tried each request, never served stale.
+    if ctx["data_tier"] in ("exact", "regional_fallback", "historical_baseline"):
+        cache.set(cache_key, result, ttl=_CHAT_TTL_SECONDS)
+    return result
