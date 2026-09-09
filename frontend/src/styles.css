@@ -503,7 +503,8 @@ button:focus-visible {
 .floating-chat-button {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: 92px; /* above the fixed bottom nav, not hidden behind it */
+  z-index: 101; /* above the nav (z-index 100) */
   width: 58px;
   height: 58px;
   border: 0;
@@ -2436,3 +2437,217 @@ button:focus-visible {
   }
 }
 
+
+/* --- Chat tab (POST /chat) --- */
+.chat-page {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 48px);
+}
+
+/* Standard app header pattern: back button left, title centered, spacer right. */
+.chat-header {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.chat-title {
+  margin: 0;
+  text-align: center;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.chat-thread {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.chat-empty { color: #5f6d63; font-size: 14px; }
+.chat-empty p { margin: 8px 0 12px; }
+.chat-suggestions { display: flex; flex-direction: column; gap: 10px; }
+.chat-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid #dbe2d5;
+  background: rgba(255, 253, 248, 0.9);
+  color: #203128;
+  border-radius: 14px;
+  padding: 13px 15px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  box-shadow: 0 4px 14px rgba(45, 67, 50, 0.05);
+  transition: border-color 0.15s, background 0.15s;
+}
+.chat-suggestion::before {
+  content: "✦";
+  color: #6f9877;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+.chat-suggestion:hover { border-color: #426b4c; background: #fffdf8; }
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 11px 15px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.chat-user {
+  align-self: flex-end;
+  background: #426b4c;
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+.chat-assistant {
+  align-self: flex-start;
+  background: #fffdf8;
+  color: #203128;
+  border: 1px solid #e4e8dd;
+  border-bottom-left-radius: 5px;
+  box-shadow: 0 6px 18px rgba(45, 67, 50, 0.06);
+}
+.chat-error { color: #8a4b3b; border-color: #e6cfc7; }
+.chat-bubble-text .chat-line { margin: 0 0 6px; }
+.chat-bubble-text .chat-line:last-child { margin-bottom: 0; }
+.chat-break { display: block; height: 6px; }
+.chat-assistant .provenance-chip { margin-top: 9px; }
+
+.chat-typing { display: inline-flex; gap: 4px; align-items: center; }
+.chat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9aa89d;
+  animation: chat-bounce 1.2s infinite ease-in-out;
+}
+.chat-dot:nth-child(2) { animation-delay: 0.15s; }
+.chat-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chat-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(82, 103, 88, 0.1);
+}
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 15px;
+  border: 1px solid #d8ddd2;
+  border-radius: 13px;
+  background: #fffdf8;
+  color: #203128;
+  font-size: 14px;
+}
+.chat-input:focus-visible { outline: 3px solid rgba(53, 113, 73, 0.35); outline-offset: 1px; }
+.chat-send {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 13px;
+  padding: 12px 20px;
+  background: #426b4c;
+  color: white;
+  font-weight: 650;
+  cursor: pointer;
+}
+.chat-send:disabled { opacity: 0.5; cursor: default; }
+
+/* Chat screen: focused view (no bottom nav) with a soft weather backdrop */
+.chat-page { position: relative; }
+.chat-header,
+.chat-thread,
+.chat-input-bar { position: relative; z-index: 1; }
+.chat-back { font-size: 20px; color: #294635; line-height: 1; }
+.chat-heading { min-width: 0; }
+
+.chat-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Green sky wash at the top fading to the app cream, plus a warm sun glow —
+     echoes the weather-postcard palette so the screen belongs to the app. */
+  background:
+    linear-gradient(180deg, #d3e6d2 0%, #e7eede 34%, #f6f4ed 66%),
+    radial-gradient(58% 40% at 85% 9%, rgba(255, 214, 120, 0.45), transparent 62%);
+}
+.chat-sun {
+  position: absolute;
+  top: 42px;
+  right: 44px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 120, 0.95) 0%, rgba(255, 214, 120, 0.4) 58%, transparent 72%);
+}
+/* Low rolling hills anchoring the bottom (large ellipses, mostly off-screen). */
+.chat-hill {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+}
+.chat-hill-back {
+  bottom: -150px;
+  width: 150%;
+  height: 270px;
+  background: #bcd0b3;
+  opacity: 0.5;
+}
+.chat-hill-front {
+  bottom: -180px;
+  width: 132%;
+  height: 280px;
+  background: #a9c29d;
+  opacity: 0.65;
+}
+
+/* Voice input mic button */
+.chat-mic {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d8ddd2;
+  border-radius: 13px;
+  background: #fffdf8;
+  color: #426b4c;
+  cursor: pointer;
+}
+.chat-mic:hover { border-color: #426b4c; }
+.chat-mic:disabled { opacity: 0.5; cursor: default; }
+.chat-mic.listening {
+  background: #426b4c;
+  color: white;
+  border-color: #426b4c;
+  animation: chat-mic-pulse 1.3s infinite;
+}
+@keyframes chat-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(66, 107, 76, 0.45); }
+  50% { box-shadow: 0 0 0 7px rgba(66, 107, 76, 0); }
+}
+
+/* Header refresh button (spins while re-fetching) */
+.reload-button { color: #294635; }
+.reload-glyph { display: block; font-size: 20px; line-height: 1; }
+.reload-button:disabled { cursor: default; }
+.reload-button.spinning .reload-glyph { animation: reload-spin 0.8s linear infinite; }
+@keyframes reload-spin { to { transform: rotate(360deg); } }
