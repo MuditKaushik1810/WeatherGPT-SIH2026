@@ -82,46 +82,90 @@ def _deterministic_answer(ctx: dict) -> str:
     return answer
 
 
-def generate_answer(ctx: dict, query: str, language: str = "en") -> str:
+def _history_preamble(history: list[dict] | None) -> str:
+    """
+    Render the last few conversation turns as context for the LLM so elliptical
+    follow-ups ("what about tomorrow?", "and the humidity?") read naturally. It is
+    context ONLY — the grounding rules still forbid restating any old value as a
+    current fact, so the preamble says so explicitly. Empty when there's no usable
+    history; ignored entirely by the deterministic fallback.
+    """
+    if not history:
+        return ""
+    lines = []
+    for turn in history[-6:]:
+        role = turn.get("role")
+        content = (turn.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            who = "User" if role == "user" else "Assistant"
+            lines.append(f"{who}: {content}")
+    if not lines:
+        return ""
+    return (
+        "Conversation so far (for context only — do NOT restate any earlier weather "
+        "value as current; ground every fact in FACTS below):\n"
+        + "\n".join(lines)
+        + "\n\n"
+    )
+
+
+def generate_answer(ctx: dict, query: str, language: str = "en", history: list[dict] | None = None) -> str:
     """
     Produce the user-facing answer from a grounding context. Uses the LLM to
-    rephrase the grounded facts; if no LLM is available, falls back to a
-    deterministic grounded summary. Always returns a non-empty answer.
+    rephrase the grounded facts (optionally given recent conversation for
+    coherence); if no LLM is available, falls back to a deterministic grounded
+    summary. Always returns a non-empty answer.
     """
     system = _system_prompt(ctx, language)
-    user = f"{ctx['context_block']}\n\nUser question: {query}"
+    user = f"{_history_preamble(history)}{ctx['context_block']}\n\nUser question: {query}"
     text = llm.complete(system, user)
     if text and text.strip():
         return text.strip()
     return _deterministic_answer(ctx)
 
 
-def answer_query(query: str, language: str = "en", user_id: str | None = None) -> dict:
+def answer_query(
+    query: str,
+    language: str = "en",
+    user_id: str | None = None,
+    context_location: str | None = None,
+    history: list[dict] | None = None,
+) -> dict:
     """
     Full POST /chat pipeline. Returns the documented contract shape (§3.10):
-    {answer, data_tier, source, query_class, audio_url}. `audio_url` is None —
-    voice output is a browser-side (Web Speech) concern, added later.
+    {answer, data_tier, source, query_class, audio_url, location}. `audio_url` is
+    None — voice output is a browser-side (Web Speech) concern. `location` echoes
+    the resolved place so the client can carry it as context on the next turn.
+
+    Multi-turn support: `context_location` is the conversation/default location the
+    client carries forward, and `history` is the recent turns. An explicit city in
+    the query always wins; otherwise the query resolves against `context_location`,
+    so a bare follow-up ("what about tomorrow?") or a location-less question uses
+    the last/default place instead of dead-ending on "which city?".
     """
-    cache_key = f"chat:{language}:{query.strip().lower()}"
+    parsed = intent.extract_intent(query)
+    query_class = parsed["query_class"]
+    time_range = parsed["time_range"]
+    ctx_loc = context_location.strip() if context_location and context_location.strip() else None
+    location = parsed["location"] or ctx_loc
+
+    # Cache key uses the RESOLVED location, so a bare follow-up caches against the
+    # place it actually resolved to — not just the literal words the user typed.
+    cache_key = f"chat:{language}:{(location or '').lower()}:{query.strip().lower()}"
     cached = cache.get(cache_key)
     if cached:
         return cached
-
-    parsed = intent.extract_intent(query)
-    location = parsed["location"]
-    query_class = parsed["query_class"]
-    time_range = parsed["time_range"]
 
     if location and time_range in _FUTURE_OFFSETS:
         # Future-dated query — ground the forecast for the requested day(s).
         fc = forecast.get_daily_forecast(location, _FUTURE_OFFSETS[time_range])
         ctx = grounding.build_forecast_context(fc, query_class)
     else:
-        # Current conditions (or an honest "which place?" when no location parsed).
+        # Current conditions (or an honest "which place?" when nothing resolved).
         record = degradation_ladder.get_weather(location) if location else _need_location_record()
         ctx = grounding.build_grounding_context(record, query_class=query_class)
 
-    answer = generate_answer(ctx, query, language)
+    answer = generate_answer(ctx, query, language, history)
 
     result = {
         "answer": answer,
@@ -129,6 +173,7 @@ def answer_query(query: str, language: str = "en", user_id: str | None = None) -
         "source": ctx["source"],
         "query_class": query_class,
         "audio_url": None,
+        "location": ctx["location"],
     }
     # Cache only settled tiers — a "live is down" state (source_unavailable) or an
     # unresolved location is re-tried each request, never served stale.

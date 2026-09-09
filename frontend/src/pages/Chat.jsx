@@ -3,66 +3,34 @@ import ProvenanceChip from '../components/ProvenanceChip'
 import { fetchChatAnswer } from '../api/chat'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation } from '../lib/savedLocation'
-import { useI18n, LANGUAGES } from '../i18n'
+import { getDefaultLocation } from '../lib/preferences'
+import { loadSession, saveSession, clearSession } from '../lib/chatSession'
+import { useI18n, translate, LANGUAGES } from '../i18n'
 
-// Suggestions are built fresh each open and are genuinely situational: they draw
-// on the saved location, the current season (so prompts feel timely/national),
-// and — once the location's live conditions load — the actual weather, AQI and
-// any active warnings for that place.
-const LOCATION_TEMPLATES = [
-  (loc) => `Will it rain in ${loc} tomorrow?`,
-  (loc) => `How's the air quality in ${loc} right now?`,
-  (loc) => `Do I need an umbrella in ${loc} today?`,
-  (loc) => `What's the weekend forecast for ${loc}?`,
-  (loc) => `Is it a good day to be outdoors in ${loc}?`,
-]
+// Starter suggestions. Each is a catalog key rendered two ways: the LABEL in the
+// user's language (what they see and what appears in the chat bubble) and the
+// English QUERY sent to the backend — so the backend's location parser always
+// sees a name it knows, while the UI stays fully localized. The location is the
+// saved/default place (or Delhi as a neutral example when none is set yet), and
+// the set upgrades to conditions-aware prompts once the location's data loads.
+const BASE_SUGGESTIONS = ['suggest.rainTomorrow', 'suggest.airQuality', 'suggest.weekend']
 
-function seasonalPrompts(now = new Date()) {
-  const m = now.getMonth()
-  if (m >= 5 && m <= 8) return [ // Jun–Sep: monsoon
-    'Monsoon outlook for the west coast this week?',
-    'Any flood warnings across the country right now?',
-    'Where is heavy rainfall expected this week?',
-  ]
-  if (m >= 2 && m <= 4) return [ // Mar–May: summer
-    'Any heat wave warnings across north India?',
-    'Which cities are hottest right now?',
-    'How do I stay safe in the heat this week?',
-  ]
-  return [ // Oct–Feb: winter
-    'Any cold wave alerts for north India?',
-    'Where is dense fog expected this week?',
-    'How cold will it get this weekend?',
-  ]
-}
-
-// Prompts grounded in the location's ACTUAL current conditions.
-function dataDrivenPrompts(loc, view) {
+function dataDrivenKeys(view) {
   const c = (view && view.current) || {}
-  const out = []
-  if (Array.isArray(c.warnings) && c.warnings.length) out.push(`What safety steps for the active alert in ${loc}?`)
-  if (typeof c.aqi === 'number' && c.aqi > 100) out.push(`Why is the air quality poor in ${loc} today?`)
-  if (typeof c.precipitation_chance === 'number' && c.precipitation_chance >= 0.4) out.push(`Will the rain in ${loc} continue tomorrow?`)
-  if (typeof c.temp === 'number' && c.temp >= 38) out.push(`How can I stay safe in the heat in ${loc}?`)
-  return out
+  const keys = []
+  if (typeof c.aqi === 'number' && c.aqi > 100) keys.push('suggest.aqiWhy')
+  if (typeof c.temp === 'number' && c.temp >= 38) keys.push('suggest.heatSafety')
+  if (typeof c.precipitation_chance === 'number' && c.precipitation_chance >= 0.4) keys.push('suggest.rainContinue')
+  return keys
 }
 
-function shuffle(list) {
-  const a = [...list]
-  for (let i = a.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+function buildSuggestions(loc, view) {
+  const keys = [...dataDrivenKeys(view).slice(0, 2)]
+  for (const key of BASE_SUGGESTIONS) {
+    if (keys.length >= 3) break
+    if (!keys.includes(key)) keys.push(key)
   }
-  return a
-}
-
-function buildFallback(loc) {
-  const season = seasonalPrompts()
-  if (loc) {
-    const locP = shuffle(LOCATION_TEMPLATES).slice(0, 2).map((fn) => fn(loc))
-    return shuffle([...locP, shuffle(season)[0]])
-  }
-  return shuffle(season).slice(0, 3)
+  return keys.slice(0, 3).map((key) => ({ key, loc }))
 }
 
 // Render the answer text safely: preserve line breaks and turn **bold** markers
@@ -109,13 +77,19 @@ const SpeakerIcon = () => (
 
 function Chat() {
   const { t, lang: language, setLang } = useI18n()
-  const savedLocation = getSavedLocation()
-  const [messages, setMessages] = useState([]) // {id, role, text, source?, dataTier?}
+  // Resume the last conversation (persisted ~1 day) so leaving and returning to
+  // chat continues where the user left off instead of starting cold.
+  const [restored] = useState(loadSession)
+  const [messages, setMessages] = useState(() => (restored ? restored.messages : [])) // {id, role, text, source?, dataTier?}
+  const [lastLocation, setLastLocation] = useState(() => (restored ? restored.lastLocation : null))
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading
   const [listening, setListening] = useState(false)
   const [speakingId, setSpeakingId] = useState(null)
-  const [suggestions, setSuggestions] = useState(() => buildFallback(savedLocation))
+
+  const realLoc = getSavedLocation() || getDefaultLocation() || null
+  const suggestionLoc = realLoc || 'Delhi'
+  const [suggestions, setSuggestions] = useState(() => buildSuggestions(suggestionLoc, null))
   const endRef = useRef(null)
   const recognitionRef = useRef(null)
 
@@ -123,43 +97,48 @@ function Chat() {
     endRef.current?.scrollIntoView?.({ behavior: 'smooth' })
   }, [messages, status])
 
-  // Upgrade the fallback suggestions with prompts grounded in the saved
-  // location's real current conditions. Fails soft — keeps the fallback.
+  // Persist the conversation as it grows so it survives navigation / a short break.
   useEffect(() => {
-    if (!savedLocation) return undefined
+    if (messages.length) saveSession({ messages, lastLocation })
+  }, [messages, lastLocation])
+
+  // Upgrade the starter suggestions with prompts grounded in the location's real
+  // current conditions — only when there's an actual saved/default place (not the
+  // neutral example). Fails soft, keeping the base set.
+  useEffect(() => {
+    if (!realLoc) return undefined
     let active = true
-    fetchHomeView(savedLocation)
-      .then((view) => {
-        if (!active) return
-        const dd = dataDrivenPrompts(savedLocation, view).slice(0, 2)
-        if (!dd.length) return
-        const pool = shuffle([...LOCATION_TEMPLATES.map((fn) => fn(savedLocation)), ...seasonalPrompts()])
-        setSuggestions(shuffle([...dd, ...pool.slice(0, 3 - dd.length)]))
-      })
+    fetchHomeView(realLoc)
+      .then((view) => { if (active) setSuggestions(buildSuggestions(realLoc, view)) })
       .catch(() => {})
     return () => { active = false }
-  }, [savedLocation])
+  }, [realLoc])
 
-  const send = (text) => {
-    const query = text.trim()
+  const send = (rawQuery, display) => {
+    const query = (rawQuery || '').trim()
     if (!query || status === 'loading') return
-    const userMsg = { id: Date.now(), role: 'user', text: query }
+    const shown = (display ?? rawQuery).trim()
+    const userMsg = { id: Date.now(), role: 'user', text: shown }
+    // Carry recent turns + the conversation/default location so a bare follow-up
+    // ("what about tomorrow?") resolves against the last place, not a dead-end.
+    const history = messages.map((m) => ({ role: m.role, content: m.text }))
+    const contextLocation = lastLocation || getDefaultLocation() || getSavedLocation() || null
+
     setMessages((prev) => [...prev, userMsg])
     setInput('')
     setStatus('loading')
 
-    fetchChatAnswer(query, language)
+    fetchChatAnswer(query, language, { contextLocation, history })
       .then((reply) => {
         setMessages((prev) => [...prev, {
           id: userMsg.id + 1, role: 'assistant', text: reply.answer,
           source: reply.source, dataTier: reply.data_tier,
         }])
+        if (reply.location) setLastLocation(reply.location) // remember for follow-ups
       })
       .catch(() => {
         setMessages((prev) => [...prev, {
-          id: userMsg.id + 1, role: 'assistant',
-          text: t('chat.error'),
-          error: true,
+          id: userMsg.id + 1, role: 'assistant', text: t('chat.error'), error: true,
         }])
       })
       .finally(() => setStatus('idle'))
@@ -168,6 +147,15 @@ function Chat() {
   const onSubmit = (event) => {
     event.preventDefault()
     send(input)
+  }
+
+  const newChat = () => {
+    if (speechSynthesisSupported) window.speechSynthesis.cancel()
+    clearSession()
+    setMessages([])
+    setLastLocation(null)
+    setSpeakingId(null)
+    setSuggestions(buildSuggestions(suggestionLoc, null))
   }
 
   const toggleVoice = () => {
@@ -225,14 +213,27 @@ function Chat() {
             ←
           </button>
           <h1 className="chat-title">WeatherGPT</h1>
-          <select
-            className="chat-lang"
-            value={language}
-            onChange={(event) => setLang(event.target.value)}
-            aria-label={t('chat.langLabel')}
-          >
-            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
+          <div className="chat-head-actions">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                className="chat-newchat"
+                onClick={newChat}
+                aria-label={t('chat.newChat')}
+                title={t('chat.newChat')}
+              >
+                {t('chat.newChat')}
+              </button>
+            )}
+            <select
+              className="chat-lang"
+              value={language}
+              onChange={(event) => setLang(event.target.value)}
+              aria-label={t('chat.langLabel')}
+            >
+              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+            </select>
+          </div>
         </header>
 
         <section className="chat-thread" aria-live="polite">
@@ -240,11 +241,15 @@ function Chat() {
             <div className="chat-empty">
               <p>{t('chat.emptyPrompt')}</p>
               <div className="chat-suggestions">
-                {suggestions.map((s) => (
-                  <button key={s} type="button" className="chat-suggestion" onClick={() => send(s)}>
-                    {s}
-                  </button>
-                ))}
+                {suggestions.map((s) => {
+                  const label = t(s.key, { loc: s.loc })
+                  const query = translate('en', s.key, { loc: s.loc })
+                  return (
+                    <button key={s.key} type="button" className="chat-suggestion" onClick={() => send(query, label)}>
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}

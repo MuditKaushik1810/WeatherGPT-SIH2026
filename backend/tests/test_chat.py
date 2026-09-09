@@ -89,9 +89,10 @@ def test_chat_endpoint_returns_contract_shape(mock_llm, mock_get_weather):
 
     assert resp.status_code == 200
     body = resp.json()
-    assert set(body) == {"answer", "data_tier", "source", "query_class", "audio_url"}
+    assert set(body) == {"answer", "data_tier", "source", "query_class", "audio_url", "location"}
     assert body["answer"] == "31.9°C, light rain in Delhi."
     assert body["query_class"] == "realtime"
+    assert body["location"] == "Delhi"
 
 
 @patch("app.core.degradation_ladder.get_weather")
@@ -143,3 +144,57 @@ def test_answer_query_does_not_cache_a_source_unavailable_answer(mock_llm, mock_
     chat.answer_query("weather in Delhi")
 
     assert mock_gw.call_count == 2   # a "live is down" answer is re-tried, not cached
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete", return_value=None)
+def test_location_less_followup_resolves_against_context_location(mock_llm, mock_gw):
+    # A bare follow-up with no city resolves against the carried context location
+    # instead of dead-ending on "which city?".
+    mock_gw.return_value = _exact_record()
+
+    result = chat.answer_query("how's the air quality?", context_location="Delhi")
+
+    mock_gw.assert_called_once_with("Delhi")
+    assert result["data_tier"] == "exact"
+    assert result["location"] == "Delhi"
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete", return_value=None)
+def test_explicit_location_in_query_beats_context_location(mock_llm, mock_gw):
+    mock_gw.return_value = _exact_record()
+
+    chat.answer_query("weather in Mumbai", context_location="Delhi")
+
+    mock_gw.assert_called_once_with("Mumbai")   # the typed city wins over context
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete", return_value=None)
+def test_no_location_and_no_context_still_asks_for_a_place(mock_llm, mock_gw):
+    result = chat.answer_query("what's the weather like?")
+
+    mock_gw.assert_not_called()
+    assert result["data_tier"] == "unresolved_location"
+    assert result["location"] is None
+
+
+@patch("app.core.degradation_ladder.get_weather")
+@patch("app.connectors.llm.complete", return_value="ok")
+def test_history_is_passed_to_the_llm_as_context(mock_llm, mock_gw):
+    mock_gw.return_value = _exact_record()
+
+    chat.answer_query(
+        "and the humidity?",
+        context_location="Delhi",
+        history=[
+            {"role": "user", "content": "weather in Delhi"},
+            {"role": "assistant", "content": "It's 31.9°C in Delhi."},
+        ],
+    )
+
+    # complete(system, user) — the recent turns are woven into the user prompt.
+    user_prompt = mock_llm.call_args.args[1]
+    assert "Conversation so far" in user_prompt
+    assert "weather in Delhi" in user_prompt

@@ -104,6 +104,14 @@ const en = {
   'settings.placeholderCrop': 'e.g. Wheat',
   'settings.farmLocationLabel': 'Farm location',
   'settings.placeholderFarm': 'e.g. Karnal, Haryana',
+
+  'chat.newChat': 'New chat',
+  'suggest.rainTomorrow': 'Will it rain in {loc} tomorrow?',
+  'suggest.airQuality': "How's the air quality in {loc} right now?",
+  'suggest.weekend': "What's the weekend forecast for {loc}?",
+  'suggest.heatSafety': 'How can I stay safe in the heat in {loc}?',
+  'suggest.aqiWhy': 'Why is the air quality poor in {loc} today?',
+  'suggest.rainContinue': 'Will the rain in {loc} continue tomorrow?',
 }
 
 const hi = {
@@ -199,6 +207,14 @@ const hi = {
   'settings.placeholderCrop': 'जैसे गेहूँ',
   'settings.farmLocationLabel': 'खेत का स्थान',
   'settings.placeholderFarm': 'जैसे करनाल, हरियाणा',
+
+  'chat.newChat': 'नई चैट',
+  'suggest.rainTomorrow': 'क्या {loc} में कल बारिश होगी?',
+  'suggest.airQuality': '{loc} में अभी हवा की गुणवत्ता कैसी है?',
+  'suggest.weekend': '{loc} के लिए सप्ताहांत का पूर्वानुमान क्या है?',
+  'suggest.heatSafety': '{loc} में गर्मी में सुरक्षित कैसे रहें?',
+  'suggest.aqiWhy': 'आज {loc} में हवा की गुणवत्ता खराब क्यों है?',
+  'suggest.rainContinue': 'क्या {loc} में कल भी बारिश जारी रहेगी?',
 }
 
 const bn = {
@@ -294,6 +310,14 @@ const bn = {
   'settings.placeholderCrop': 'যেমন গম',
   'settings.farmLocationLabel': 'খামারের অবস্থান',
   'settings.placeholderFarm': 'যেমন কার্নাল, হরিয়ানা',
+
+  'chat.newChat': 'নতুন চ্যাট',
+  'suggest.rainTomorrow': 'আগামীকাল {loc}-এ কি বৃষ্টি হবে?',
+  'suggest.airQuality': '{loc}-এ এখন বাতাসের গুণমান কেমন?',
+  'suggest.weekend': '{loc}-এর সপ্তাহান্তের পূর্বাভাস কী?',
+  'suggest.heatSafety': '{loc}-এ গরমে কীভাবে নিরাপদ থাকবেন?',
+  'suggest.aqiWhy': 'আজ {loc}-এ বাতাসের গুণমান খারাপ কেন?',
+  'suggest.rainContinue': 'আগামীকাল {loc}-এ কি বৃষ্টি চলবে?',
 }
 
 const ta = {
@@ -389,6 +413,14 @@ const ta = {
   'settings.placeholderCrop': 'எ.கா. கோதுமை',
   'settings.farmLocationLabel': 'பண்ணை இருப்பிடம்',
   'settings.placeholderFarm': 'எ.கா. கர்னால், ஹரியானா',
+
+  'chat.newChat': 'புதிய அரட்டை',
+  'suggest.rainTomorrow': 'நாளை {loc}-இல் மழை பெய்யுமா?',
+  'suggest.airQuality': '{loc}-இல் இப்போது காற்றின் தரம் எப்படி உள்ளது?',
+  'suggest.weekend': '{loc}-க்கான வார இறுதி முன்னறிவிப்பு என்ன?',
+  'suggest.heatSafety': '{loc}-இல் வெப்பத்தில் எப்படி பாதுகாப்பாக இருப்பது?',
+  'suggest.aqiWhy': 'இன்று {loc}-இல் காற்றின் தரம் ஏன் மோசமாக உள்ளது?',
+  'suggest.rainContinue': 'நாளை {loc}-இல் மழை தொடருமா?',
 }
 
 const mr = {
@@ -484,6 +516,14 @@ const mr = {
   'settings.placeholderCrop': 'उदा. गहू',
   'settings.farmLocationLabel': 'शेताचे स्थान',
   'settings.placeholderFarm': 'उदा. कर्नाल, हरियाणा',
+
+  'chat.newChat': 'नवीन चॅट',
+  'suggest.rainTomorrow': 'उद्या {loc} मध्ये पाऊस पडेल का?',
+  'suggest.airQuality': '{loc} मध्ये आत्ता हवेची गुणवत्ता कशी आहे?',
+  'suggest.weekend': '{loc} साठी आठवड्याच्या शेवटचा अंदाज काय आहे?',
+  'suggest.heatSafety': '{loc} मध्ये उष्णतेत सुरक्षित कसे राहावे?',
+  'suggest.aqiWhy': 'आज {loc} मध्ये हवेची गुणवत्ता खराब का आहे?',
+  'suggest.rainContinue': 'उद्या {loc} मध्ये पाऊस सुरू राहील का?',
 }
 
 const pa = {
@@ -579,6 +619,14 @@ const pa = {
   'settings.placeholderCrop': 'ਜਿਵੇਂ ਕਣਕ',
   'settings.farmLocationLabel': 'ਖੇਤ ਦਾ ਟਿਕਾਣਾ',
   'settings.placeholderFarm': 'ਜਿਵੇਂ ਕਰਨਾਲ, ਹਰਿਆਣਾ',
+
+  'chat.newChat': 'ਨਵੀਂ ਚੈਟ',
+  'suggest.rainTomorrow': 'ਕੀ ਕੱਲ੍ਹ {loc} ਵਿੱਚ ਮੀਂਹ ਪਵੇਗਾ?',
+  'suggest.airQuality': '{loc} ਵਿੱਚ ਹੁਣ ਹਵਾ ਦੀ ਗੁਣਵੱਤਾ ਕਿਹੋ ਜਿਹੀ ਹੈ?',
+  'suggest.weekend': '{loc} ਲਈ ਹਫ਼ਤੇ ਦੇ ਅੰਤ ਦਾ ਅਨੁਮਾਨ ਕੀ ਹੈ?',
+  'suggest.heatSafety': '{loc} ਵਿੱਚ ਗਰਮੀ ਵਿੱਚ ਸੁਰੱਖਿਅਤ ਕਿਵੇਂ ਰਹਿਣਾ ਹੈ?',
+  'suggest.aqiWhy': 'ਅੱਜ {loc} ਵਿੱਚ ਹਵਾ ਦੀ ਗੁਣਵੱਤਾ ਖ਼ਰਾਬ ਕਿਉਂ ਹੈ?',
+  'suggest.rainContinue': 'ਕੀ ਕੱਲ੍ਹ {loc} ਵਿੱਚ ਮੀਂਹ ਜਾਰੀ ਰਹੇਗਾ?',
 }
 
 export const CATALOG = { en, hi, bn, ta, mr, pa }

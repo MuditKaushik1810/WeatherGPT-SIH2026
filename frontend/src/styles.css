@@ -2823,3 +2823,23 @@ button:focus-visible {
 .settings-chip-danger:hover {
   border-color: #a5453c;
 }
+
+/* Chat header actions: a "New chat" reset alongside the language selector. */
+.chat-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chat-newchat {
+  border: 1px solid #cdd8c8;
+  background: rgba(255, 255, 255, 0.8);
+  color: #33543c;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat-newchat:hover {
+  border-color: #426b4c;
+}
