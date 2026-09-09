@@ -2450,7 +2450,7 @@ button:focus-visible {
 /* Standard app header pattern: back button left, title centered, spacer right. */
 .chat-header {
   display: grid;
-  grid-template-columns: 44px 1fr 44px;
+  grid-template-columns: 44px 1fr auto;
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
@@ -2651,3 +2651,40 @@ button:focus-visible {
 .reload-button:disabled { cursor: default; }
 .reload-button.spinning .reload-glyph { animation: reload-spin 0.8s linear infinite; }
 @keyframes reload-spin { to { transform: rotate(360deg); } }
+
+/* Chat language selector (multilingual answers) + voice-output button */
+.chat-lang {
+  justify-self: end;
+  max-width: 104px;
+  border: 1px solid #d8ddd2;
+  border-radius: 11px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #294635;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.chat-lang:focus-visible { outline: 3px solid rgba(53, 113, 73, 0.35); outline-offset: 1px; }
+
+.chat-answer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+.chat-speak {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #dbe2d5;
+  border-radius: 9px;
+  background: #fffdf8;
+  color: #426b4c;
+  cursor: pointer;
+}
+.chat-speak:hover { border-color: #426b4c; }
+.chat-speak.speaking { background: #426b4c; color: white; border-color: #426b4c; }
