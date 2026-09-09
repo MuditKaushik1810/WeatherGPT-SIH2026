@@ -12,6 +12,7 @@ const KEYS = {
   savedLocations: 'weathergpt.savedLocations',
   farmerCrop: 'weathergpt.farmer.crop',
   farmerLocation: 'weathergpt.farmer.location',
+  persona: 'weathergpt.persona',
 }
 
 function read(key) {
@@ -78,6 +79,18 @@ export function removeSavedLocation(name) {
 
 export function getFarmerPrefs() {
   return { crop: read(KEYS.farmerCrop) || '', location: read(KEYS.farmerLocation) || '' }
+}
+
+// The active product persona. Farmer Mode is a separate persona (not a nav tab);
+// it persists so a farmer reopens the app straight into Farmer Mode. Default is
+// the normal user; 'farmer' is the only value we store.
+export function getPersona() {
+  return read(KEYS.persona) === 'farmer' ? 'farmer' : 'normal'
+}
+
+export function setPersona(persona) {
+  if (persona === 'farmer') write(KEYS.persona, 'farmer')
+  else remove(KEYS.persona)
 }
 
 export function setFarmerPrefs({ crop, location }) {

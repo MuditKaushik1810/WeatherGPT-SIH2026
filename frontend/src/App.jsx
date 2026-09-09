@@ -7,10 +7,17 @@ import CropPlanning from './pages/CropPlanning'
 import Chat from './pages/Chat'
 import Settings from './pages/Settings'
 import BottomNav from './components/BottomNav'
+import { getPersona } from './lib/preferences'
 
 function getPageFromHash() {
   const page = window.location.hash.replace('#', '').split('?')[0]
-  return ['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch', 'chat', 'settings'].includes(page) ? page : 'home'
+  if (['home', 'travel', 'disaster', 'farmer/planning', 'farmer/watch', 'chat', 'settings'].includes(page)) {
+    return page
+  }
+  // No explicit page in the hash → open into the last-used persona. A farmer
+  // reopens straight into Farmer Mode (Crop Watch); everyone else lands on Home.
+  if (!page && getPersona() === 'farmer') return 'farmer/watch'
+  return 'home'
 }
 
 function App() {

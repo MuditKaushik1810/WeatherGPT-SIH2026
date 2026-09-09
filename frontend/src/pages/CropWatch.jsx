@@ -1,4 +1,5 @@
 import farmerCropWatch from '../mocks/farmerCropWatch.json'
+import { setPersona } from '../lib/preferences'
 
 const stageItems = [
   { label: 'Germination', state: 'complete', symbol: '01' },
@@ -17,6 +18,13 @@ const threatSymbols = {
 
 function goTo(hash) {
   window.location.hash = hash
+}
+
+// Leaving Farmer Mode switches the persona back to normal (persisted) so the app
+// no longer reopens into Farmer Mode.
+function exitFarmerMode() {
+  setPersona('normal')
+  goTo('#home')
 }
 
 function CropWatch() {
@@ -44,7 +52,7 @@ function CropWatch() {
           <button
             className="farmer-mode-switch"
             type="button"
-            onClick={() => goTo('#home')}
+            onClick={exitFarmerMode}
             aria-label="Switch to normal WeatherGPT mode"
           >
             <span aria-hidden="true">◆</span>
@@ -166,8 +174,8 @@ function CropWatch() {
         <nav className="farmer-bottom-nav" aria-label="Farmer Mode navigation">
           <button
             type="button"
-            disabled
-            aria-label="Crop Planning, coming next"
+            onClick={() => goTo('#farmer/planning')}
+            aria-label="Crop Planning"
           >
             <span aria-hidden="true">◇</span>
             <span>Crop Planning</span>

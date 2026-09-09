@@ -2843,3 +2843,47 @@ button:focus-visible {
 .chat-newchat:hover {
   border-color: #426b4c;
 }
+
+/* Header menu (persona switch + Settings), opened from the hamburger. */
+.header-menu-wrap {
+  position: relative;
+}
+.header-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: default;
+}
+.header-menu {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  z-index: 50;
+  min-width: 224px;
+  background: #fffdf8;
+  border: 1px solid #dbe2d5;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(41, 62, 47, 0.16);
+  padding: 6px;
+}
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #203128;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.header-menu-item:hover {
+  background: #eef3ea;
+}

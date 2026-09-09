@@ -2,6 +2,7 @@ import {
   getDefaultLocation, setDefaultLocation,
   getSavedLocations, addSavedLocation, removeSavedLocation,
   getFarmerPrefs, setFarmerPrefs,
+  getPersona, setPersona,
 } from './preferences'
 
 beforeEach(() => localStorage.clear())
@@ -37,4 +38,13 @@ it('stores farmer preferences independently', () => {
   expect(getFarmerPrefs()).toEqual({ crop: 'Wheat', location: 'Karnal' })
   setFarmerPrefs({ crop: '' })
   expect(getFarmerPrefs()).toEqual({ crop: '', location: 'Karnal' })
+})
+
+it('defaults to the normal persona and persists the farmer persona', () => {
+  expect(getPersona()).toBe('normal')
+  setPersona('farmer')
+  expect(getPersona()).toBe('farmer')
+  setPersona('normal')
+  expect(getPersona()).toBe('normal')
+  expect(localStorage.getItem('weathergpt.persona')).toBeNull()
 })
