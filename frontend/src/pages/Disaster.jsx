@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import BottomNav from '../components/BottomNav'
 import disasterAlerts from '../mocks/disasterAlerts.json'
 import disasterActiveAlert from '../mocks/disasterActiveAlert.json'
 import rescueCenters from '../mocks/disasterRescueCenters.json'
@@ -262,11 +261,10 @@ function Disaster() {
           {panel === 'numbers' && <EmergencyPanel onClose={() => setPanel(null)} />}
           {panel === 'sos' && <SosPanel onClose={() => setPanel(null)} />}
         </section>
-
-        <BottomNav active="disaster" />
       </div>
     </main>
   )
 }
 
 export default Disaster
+
