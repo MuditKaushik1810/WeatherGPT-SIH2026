@@ -68,12 +68,16 @@ card / floating button, with situational suggestions, a provenance chip on every
 answer, and Web Speech voice input **and** output. The UI is **multilingual**:
 a lightweight app-wide i18n layer (en, hi, bn, ta, mr, pa) re-renders the whole
 app in the chosen language, which also drives the LLM answer language and browser
-voice. Vitest suite in CI.
+voice. `POST /chat` is **multi-turn** — it carries a context location + recent
+history, so a bare follow-up ("what about tomorrow?") resolves against the last
+place instead of dead-ending. A user **Settings** screen (default/saved locations,
+language, farmer preferences) lives off the header menu, and the **chat
+conversation persists** on-device (~1 day) and restores on return. Vitest suite
+in CI.
 
-Still open in Sprint 2: a user **Settings** screen (default location + language +
-farmer preferences) and **chat session persistence** (restore the last
-conversation and carry follow-up context). The bn/ta/mr/pa UI strings are a
-first pass awaiting native-speaker review, and the Disaster/Travel/Farmer screens
-still need to migrate onto the i18n keys. A real IMD warnings connector (currently
-a fail-soft stub) also remains. See the Architecture doc, Section 8, for the full
-living status and backlog.
+Still open in Sprint 2: native-speaker review of the bn/ta/mr/pa UI strings, and
+migrating the Disaster/Travel/Farmer screens onto the i18n keys. Next up is
+**Sprint 3** — the Farmer Advisory backend (crop rules, Disease Suitability Model,
+risk scoring) and the Trip Planner backend. A real IMD warnings connector
+(currently a fail-soft stub) also remains. See the Architecture doc, Section 8,
+for the full living status and backlog.

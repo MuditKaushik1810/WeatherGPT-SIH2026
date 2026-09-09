@@ -19,6 +19,8 @@ This document has two parts: **Part A** is the human process (Git, tasks, review
 
 Use GitHub Projects (free, lives in the same repo) with **one card per Sprint bullet point from the Architecture & Build Plan** — the sprint plan is already broken into the right granularity, don't re-invent a separate task list. Each card: assignee, status (Not Started / In Progress / In Review / Done), and which branch it lives on.
 
+> **Current status lives in one place:** §8 (Implementation Status & Backlog) of the Architecture & Build Plan is the living record of what's shipped vs. owed — keep the board in sync with it, don't duplicate it here. As of Sprint 2, Sprints 1–2 are shipped and deployed (data foundation + degradation ladder; grounded `POST /chat`; six-language UI + voice; Settings; chat persistence). Sprint 3 (Farmer Advisory + Trip Planner backends) is next.
+
 **Daily 15-minute async check-in** (a Slack/Discord thread is enough — doesn't need a call): what I did yesterday, what I'm doing today, what I'm blocked on. This is what surfaces "I'm also touching that file" *before* it becomes a merge conflict instead of after.
 
 ### A.3 Code review, even for AI-written code
@@ -27,13 +29,15 @@ Every PR gets a quick look from someone other than whoever drove the agent sessi
 
 ### A.4 Why interfaces matter more than communication
 
-Two people's AI agents can build the IMD connector and the Open-Meteo connector fully in parallel, with zero coordination, and still plug together correctly — **if the contract between them is fixed first.** That's already true here: the internal data shape (`{location, temp, condition, precipitation_chance, warnings, source, data_tier, fetched_at}`) and the grounding assembler's expected input are defined in the Architecture doc before Sprint 1 starts. Incompatible output between teammates' work happens when interfaces are implicit or improvised per-module — you've already avoided most of that risk by design.
+Two people's AI agents can build the IMD connector and the Open-Meteo connector fully in parallel, with zero coordination, and still plug together correctly — **if the contract between them is fixed first.** That's already true here: the internal data shape (`{location, temp, condition, precipitation_chance, humidity, feels_like, wind_speed, aqi, warnings, source, data_tier, fetched_at}` — additive metrics were added over Sprint 1–2; `data_tier` is one of exact / regional_fallback / historical_baseline / source_unavailable / unresolved_location) and the grounding assembler's expected input are defined in the Architecture doc before Sprint 1 starts. Incompatible output between teammates' work happens when interfaces are implicit or improvised per-module — you've already avoided most of that risk by design.
 
 ---
 
 ## Part B — Conventions File for AI Coding Agents
 
 Copy everything below into `CLAUDE.md` / `.cursorrules` / `AGENTS.md` at the repo root. This is what keeps five independently-run AI sessions producing compatible code without any of them talking to each other — each one reads the same rulebook and the same existing code before writing anything new.
+
+> **The repo-root `CLAUDE.md` / `AGENTS.md` / `.cursorrules` are the authoritative copy and have expanded since this excerpt was first written** (notably the full data contract with `humidity`/`feels_like`/`wind_speed`/`aqi` and the five `data_tier` values, and the full §3.10 endpoint shapes). Treat the repo-root files as source of truth; the excerpt below is the origin snapshot, kept for context.
 
 ```markdown
 # WeatherGPT — Agent Instructions

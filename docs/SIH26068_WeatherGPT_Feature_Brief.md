@@ -3,6 +3,8 @@
 
 This document exists to answer one question per feature: **is this worth the time it will take, and how risky is it to build?** It's a companion to the Architecture & Build Plan (which covers *how* things connect) and the Product Mockup (which shows *what it looks like*) — this one is the honest spec sheet: what each feature is, why it earns its place, and where the real risk sits.
 
+> **This is the intent/feasibility view, not the status tracker.** For what has actually shipped versus what's still planned, see **§8 (Implementation Status & Backlog)** of the Architecture & Build Plan — that section is the living source of truth. As of Sprint 2: the Grounded Conversational Core (Feature 1) and the Data Foundation (Feature 2) are shipped and deployed, plus a six-language whole-app UI, Web Speech voice in/out, a user Settings screen, and chat session persistence; the flagship Farmer Advisory (Features 4–6) and the Trip Planner backend (Feature 9) are the next major build.
+
 **How to read the Priority tags:** `Flagship` = the actual differentiation argument, never cut. `Core` = table-stakes, satisfies the PS's literal brief. `Secondary` = a genuine feature, real value, but not what separates this submission from a competent generic chatbot. `Stretch` = worth having if time allows, explicitly not promised.
 
 ---
@@ -39,13 +41,15 @@ This document exists to answer one question per feature: **is this worth the tim
 
 ### 1. Grounded Conversational Core
 
-**What it is:** Natural-language weather Q&A in text and voice, across three Indian languages, with every answer carrying a visible source tag (`data_tier`) showing exactly which data produced it — an official IMD warning, a live Open-Meteo grid value, or a historical baseline.
+**What it is:** Natural-language weather Q&A in text and voice, across six Indian languages, with every answer carrying a visible source tag (`data_tier`) showing exactly which data produced it — an official IMD warning, a live Open-Meteo grid value, or a historical baseline.
 
 **Why it's worth building:** This satisfies the PS's literal brief as a general conversational platform, and it's the foundation every other feature sits on. It's also the concrete proof of the "grounded" half of the differentiation argument (Section 2.1 of the architecture doc) — the provenance chip is the single visual element that separates this from an opaque chatbot answer.
 
 **Feasibility:** Medium effort, low technical risk. The rule/keyword fast path handles simple queries without an LLM call at all; the LLM is only reached for genuinely ambiguous phrasing. The main real risk is prompt design quality (getting the "never bare-refuse" instruction to hold reliably across edge cases) — mitigated by the degradation ladder doing the hard work before the LLM ever sees the query.
 
 **Honest limitation:** On a single one-off question, a generic LLM with browsing does nearly as well. This feature alone is not the pitch — see Feature 4.
+
+**Status — shipped (Sprint 2):** grounded `POST /chat` end-to-end (rule/keyword intent extraction → grounding assembler → Gemini Flash with Groq fallback, fail-soft to a deterministic grounded answer), forecast-aware, short-TTL cached, and multi-turn (a bare follow-up resolves against the carried/default location). The whole UI localizes across six languages (en/hi/bn/ta/mr/pa; en+hi hand-verified, the rest pending native review), with Web Speech voice input and output, and the conversation persists on-device for ~a day.
 
 ---
 
@@ -197,7 +201,7 @@ Extending beyond 8 crops, or adding state-specific variants of the same crop's a
 
 ### 15. Fourth language
 
-Real accessibility value, but it's breadth on the baseline conversational layer — it doesn't change whether judges see this as more than "just a chatbot." Add only after everything else is solid.
+Real accessibility value, but it's breadth on the baseline conversational layer — it doesn't change whether judges see this as more than "just a chatbot." Add only after everything else is solid. **Update — overtaken by delivery:** the UI and answers now support six languages (en/hi/bn/ta/mr/pa), so breadth is no longer the open question. The remaining language work is *quality*, not count — native-speaker review of the bn/ta/mr/pa strings before submission.
 
 ### 16. On-device offline model (true zero-network answers)
 
