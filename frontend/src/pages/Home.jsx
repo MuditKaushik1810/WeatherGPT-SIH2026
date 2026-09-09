@@ -7,10 +7,12 @@ import WeatherGPTCard from '../components/WeatherGPTCard'
 import FloatingChatButton from '../components/FloatingChatButton'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation, saveLocation } from '../lib/savedLocation'
+import { useI18n } from '../i18n'
 
 const openChat = () => { window.location.hash = 'chat' }
 
 function Home() {
+  const { t } = useI18n()
   const [location, setLocation] = useState(() => getSavedLocation())
   const [input, setInput] = useState(location ?? '')
   const [status, setStatus] = useState('idle') // idle | loading | success | error
@@ -67,7 +69,7 @@ function Home() {
     <main className="app-shell">
       <div className="home-page">
         <Header
-          location={location ?? 'Set your location'}
+          location={location}
           updatedAt={updatedAt}
           loading={status === 'loading'}
           onReload={retry}
@@ -79,33 +81,33 @@ function Home() {
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Enter a city or district (e.g. Delhi)"
-            aria-label="Location"
+            placeholder={t('home.locationPlaceholder')}
+            aria-label={t('home.locationLabel')}
           />
-          <button className="location-go" type="submit">Go</button>
+          <button className="location-go" type="submit">{t('home.go')}</button>
         </form>
 
         <section className="home-content">
           {!location && (
-            <p className="home-hint">Enter a city or district above to see its weather.</p>
+            <p className="home-hint">{t('home.firstRun')}</p>
           )}
 
           {location && status === 'loading' && (
-            <p className="home-status" role="status">Loading weather for {location}…</p>
+            <p className="home-status" role="status">{t('home.loading', { location })}</p>
           )}
 
           {location && status === 'error' && (
             <div className="home-error" role="alert">
-              <p>Couldn&apos;t reach the weather service.</p>
+              <p>{t('home.errorTitle')}</p>
               <button type="button" className="location-go" onClick={retry}>
-                Retry
+                {t('home.retry')}
               </button>
             </div>
           )}
 
           {notFound && (
             <div className="home-error" role="alert">
-              <p>We couldn&apos;t find “{location}”. Try a nearby city or district name.</p>
+              <p>{t('home.notFound', { location })}</p>
             </div>
           )}
 

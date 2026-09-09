@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import Chat from './Chat'
 import { fetchChatAnswer } from '../api/chat'
 import { fetchHomeView } from '../api/home'
+import { resetLanguageForTests } from '../i18n'
 
 vi.mock('../api/chat')
 vi.mock('../api/home')
@@ -9,6 +10,9 @@ vi.mock('../api/home')
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  // The language store is a module-level singleton that outlives one test —
+  // reset it so a language switched in one test doesn't leak into the next.
+  resetLanguageForTests()
   // Live-conditions upgrade: default to no notable conditions, so tests are
   // deterministic on the fallback suggestions.
   fetchHomeView.mockResolvedValue({ current: {} })
@@ -39,7 +43,26 @@ it('sends a clicked suggestion to the chat endpoint', async () => {
   fireEvent.click(first)
 
   expect(await screen.findByText(/Clear skies/)).toBeInTheDocument()
-  expect(fetchChatAnswer).toHaveBeenCalledWith(first.textContent)
+  expect(fetchChatAnswer).toHaveBeenCalledWith(first.textContent, 'en')
+})
+
+it('sends the selected language to the chat endpoint', async () => {
+  fetchChatAnswer.mockResolvedValue({
+    answer: 'दिल्ली में साफ आसमान।', data_tier: 'exact', source: 'WeatherAPI',
+    query_class: 'realtime', audio_url: null,
+  })
+  render(<Chat />)
+
+  // Switching the selector re-renders the whole screen in the chosen language,
+  // so grab the controls (by their English labels) BEFORE the switch — the DOM
+  // nodes persist across the re-render, only their text/labels localize.
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'weather in Delhi' } })
+  const sendButton = screen.getByRole('button', { name: /^Send$/ })
+  fireEvent.change(screen.getByLabelText('Answer language'), { target: { value: 'hi' } })
+  fireEvent.click(sendButton)
+
+  expect(await screen.findByText(/साफ आसमान/)).toBeInTheDocument()
+  expect(fetchChatAnswer).toHaveBeenCalledWith('weather in Delhi', 'hi')
 })
 
 it('sends a typed question and shows the grounded answer with provenance', async () => {

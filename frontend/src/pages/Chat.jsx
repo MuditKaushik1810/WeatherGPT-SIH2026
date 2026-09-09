@@ -3,6 +3,7 @@ import ProvenanceChip from '../components/ProvenanceChip'
 import { fetchChatAnswer } from '../api/chat'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation } from '../lib/savedLocation'
+import { useI18n, LANGUAGES } from '../i18n'
 
 // Suggestions are built fresh each open and are genuinely situational: they draw
 // on the saved location, the current season (so prompts feel timely/national),
@@ -89,13 +90,31 @@ const MicIcon = () => (
 
 const SpeechRecognition =
   typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)
+const speechSynthesisSupported = typeof window !== 'undefined' && 'speechSynthesis' in window
+
+// The selected language drives the whole app (i18n store), the LLM answer
+// language, and browser voice in/out — bcp47 tag from the shared LANGUAGES list.
+function bcp47For(code) {
+  return (LANGUAGES.find((l) => l.code === code) || {}).bcp47 || 'en-IN'
+}
+
+const SpeakerIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 5 6 9H3v6h3l5 4z" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </svg>
+)
 
 function Chat() {
+  const { t, lang: language, setLang } = useI18n()
   const savedLocation = getSavedLocation()
   const [messages, setMessages] = useState([]) // {id, role, text, source?, dataTier?}
   const [input, setInput] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading
   const [listening, setListening] = useState(false)
+  const [speakingId, setSpeakingId] = useState(null)
   const [suggestions, setSuggestions] = useState(() => buildFallback(savedLocation))
   const endRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -129,7 +148,7 @@ function Chat() {
     setInput('')
     setStatus('loading')
 
-    fetchChatAnswer(query)
+    fetchChatAnswer(query, language)
       .then((reply) => {
         setMessages((prev) => [...prev, {
           id: userMsg.id + 1, role: 'assistant', text: reply.answer,
@@ -139,7 +158,7 @@ function Chat() {
       .catch(() => {
         setMessages((prev) => [...prev, {
           id: userMsg.id + 1, role: 'assistant',
-          text: "I couldn't reach the weather service just now — please try again in a moment.",
+          text: t('chat.error'),
           error: true,
         }])
       })
@@ -158,7 +177,7 @@ function Chat() {
       return
     }
     const recognition = new SpeechRecognition()
-    recognition.lang = 'en-IN'
+    recognition.lang = bcp47For(language)
     recognition.interimResults = false
     recognition.maxAlternatives = 1
     recognition.onresult = (event) => setInput(event.results[0][0].transcript)
@@ -167,6 +186,23 @@ function Chat() {
     recognitionRef.current = recognition
     setListening(true)
     recognition.start()
+  }
+
+  // Voice output — read an answer aloud in the selected language (toggles off if
+  // the same message is tapped again). Browsers without speechSynthesis just
+  // don't get the button.
+  const speak = (id, text) => {
+    if (!speechSynthesisSupported) return
+    window.speechSynthesis.cancel()
+    if (speakingId === id) {
+      setSpeakingId(null)
+      return
+    }
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = bcp47For(language)
+    utterance.onend = () => setSpeakingId(null)
+    setSpeakingId(id)
+    window.speechSynthesis.speak(utterance)
   }
 
   return (
@@ -182,20 +218,27 @@ function Chat() {
           <button
             className="icon-button chat-back"
             type="button"
-            aria-label="Back to home"
-            title="Back"
+            aria-label={t('chat.back')}
+            title={t('chat.backShort')}
             onClick={() => { window.location.hash = 'home' }}
           >
             ←
           </button>
           <h1 className="chat-title">WeatherGPT</h1>
-          <span aria-hidden="true" />
+          <select
+            className="chat-lang"
+            value={language}
+            onChange={(event) => setLang(event.target.value)}
+            aria-label={t('chat.langLabel')}
+          >
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+          </select>
         </header>
 
         <section className="chat-thread" aria-live="polite">
           {messages.length === 0 && (
             <div className="chat-empty">
-              <p>Ask me about the weather. For example:</p>
+              <p>{t('chat.emptyPrompt')}</p>
               <div className="chat-suggestions">
                 {suggestions.map((s) => (
                   <button key={s} type="button" className="chat-suggestion" onClick={() => send(s)}>
@@ -211,8 +254,21 @@ function Chat() {
               <div className="chat-bubble-text">
                 {msg.role === 'assistant' ? renderAnswer(msg.text) : msg.text}
               </div>
-              {msg.role === 'assistant' && !msg.error && msg.source && (
-                <ProvenanceChip source={msg.source} dataTier={msg.dataTier} />
+              {msg.role === 'assistant' && !msg.error && (
+                <div className="chat-answer-actions">
+                  {msg.source && <ProvenanceChip source={msg.source} dataTier={msg.dataTier} />}
+                  {speechSynthesisSupported && (
+                    <button
+                      type="button"
+                      className={`chat-speak${speakingId === msg.id ? ' speaking' : ''}`}
+                      onClick={() => speak(msg.id, msg.text)}
+                      aria-label={speakingId === msg.id ? t('chat.speakStop') : t('chat.speakRead')}
+                      title={t('chat.speakTitle')}
+                    >
+                      <SpeakerIcon />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}
@@ -232,8 +288,8 @@ function Chat() {
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder={listening ? 'Listening…' : 'Ask about the weather…'}
-            aria-label="Your question"
+            placeholder={listening ? t('chat.listening') : t('chat.inputPlaceholder')}
+            aria-label={t('chat.inputLabel')}
             disabled={status === 'loading'}
           />
           {SpeechRecognition && (
@@ -242,15 +298,15 @@ function Chat() {
               className={`chat-mic${listening ? ' listening' : ''}`}
               onClick={toggleVoice}
               disabled={status === 'loading'}
-              aria-label={listening ? 'Stop voice input' : 'Start voice input'}
+              aria-label={listening ? t('chat.micStop') : t('chat.micStart')}
               aria-pressed={listening}
-              title="Voice input"
+              title={t('chat.micTitle')}
             >
               <MicIcon />
             </button>
           )}
           <button className="chat-send" type="submit" disabled={status === 'loading' || !input.trim()}>
-            Send
+            {t('chat.send')}
           </button>
         </form>
       </div>
