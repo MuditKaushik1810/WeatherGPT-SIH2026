@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import Header from '../components/Header'
-import BottomNav from '../components/BottomNav'
 import travelPlan from '../mocks/travelPlan.json'
 
 const statusLabels = {
@@ -284,8 +283,6 @@ function Travel() {
             </p>
           </section>
         </section>
-
-        <BottomNav active="travel" />
       </div>
     </main>
   )

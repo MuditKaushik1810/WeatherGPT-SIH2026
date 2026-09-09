@@ -4,8 +4,6 @@ import WeatherPostcard from '../components/WeatherPostcard'
 import RecommendationCard from '../components/RecommendationCard'
 import HourlyForecast from '../components/HourlyForecast'
 import WeatherGPTCard from '../components/WeatherGPTCard'
-import FloatingChatButton from '../components/FloatingChatButton'
-import BottomNav from '../components/BottomNav'
 import { fetchHomeView } from '../api/home'
 import { getSavedLocation, saveLocation } from '../lib/savedLocation'
 
@@ -111,16 +109,10 @@ function Home() {
           <WeatherGPTCard onOpenChat={() => setChatOpen(true)} />
         </section>
       </div>
-
-      <BottomNav active="home" />
-
-      <FloatingChatButton
-        onClick={() => setChatOpen(true)}
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-      />
     </main>
   )
 }
 
 export default Home
+
+
