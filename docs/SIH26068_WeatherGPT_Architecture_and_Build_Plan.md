@@ -536,7 +536,7 @@ This is the piece that makes frontend and backend work genuinely independent (Se
   "valid_until": "2026-09-11", "sources": ["IMD forecast", "ICAR wheat rule table"] }
 ```
 
-`GET /farmer/crop-planning` — **Crop Planning** ("what should I grow?"): ~3–4 crops suited to the location + season + environmental suitability, each with a short reason and an approximate harvest window. Composite, and demo-fixture-first (`data_tier: "demo"`) until the backend lands; the frontend already renders this shape.
+`GET /farmer/crop-planning` — **Crop Planning** ("what should I grow?"): ~3–4 crops suited to the location + season, each with a short reason and an approximate harvest window. **Built** — ranks the current season's crops (season from the date) by how well the location's live temperature fits each crop's curated optimal band (grounded in the crop table, never LLM-invented); reason + harvest window are templated from those facts. Returns `data_tier: "exact"` when live temperature is used, `"seasonal"` when it isn't. The frontend renders this shape (wiring the screen to it is a one-file swap via `api/cropPlanning`, same as Crop Watch).
 ```json
 { "data_tier": "demo", "source": "Frontend demo fixture",
   "location": "Noida, Uttar Pradesh", "season": "Rabi",
@@ -833,7 +833,7 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 | Location entry / selection | **✅ shipped** — location input + a **default location** and **saved-places** list in a Settings screen, persisted in `localStorage` | saved locations in Postgres once user profiles exist |
 | App language / voice | **✅ shipped** — whole-app i18n (6 languages) + Web Speech voice in/out, chosen in Settings | native-speaker review of bn/ta/mr/pa; migrate Disaster/Travel/Farmer mock screens onto the i18n keys |
 | Farmer-Mode preferences | UI shipped in Settings (crop + farm location, persisted) | consumed by the Sprint-3 Farmer Advisory backend (profile → risk/advisory) |
-| Crop Planning (Farmer Mode) | **UI + persona entry shipped**; wired to the documented shape via an `api/cropPlanning` swap-point (demo fixture) | real `GET /farmer/crop-planning` (location + season + climate suitability → ~3–4 crops) |
+| Crop Planning (Farmer Mode) | UI + persona entry shipped; **backend built** — `GET /farmer/crop-planning` (season × temperature-fit over the curated crop table) | wire `api/cropPlanning` to the endpoint (a one-file swap, like `api/cropWatch`) — then it's end-to-end |
 | Crop Watch (Farmer Mode) | **✅ end-to-end** — screen wired to the composite `GET /farmer/crop-watch` (Crop Risk Index §3.7 + sourced 12-crop rule table), demo fixture as fail-soft fallback, sowing-date profile field drives the growth stage | — (future: DB-backed farmer profile; i18n of the farmer screen body text) |
 | Disaster alerts list | mock `/disaster/alerts` shape | live IMD-backed `GET /disaster/alerts` |
 | Disaster alert details + safety guidance | a hardcoded generic advice line in the UI | **NDMA-sourced Hazard Safety Guide** (`GET /disaster/safety-guide`, Section 3.9) — hazard-specific, curated, cited |
