@@ -279,7 +279,7 @@ function Travel() {
             </div>
 
             <p className="travel-source-note">
-              Demo values only · Weather via Open-Meteo · Routing &amp; facilities via Geoapify (planned)
+              Demo values only · Weather via WeatherAPI (Open-Meteo fallback) · Routing &amp; facilities via Geoapify (planned)
             </p>
           </section>
         </section>

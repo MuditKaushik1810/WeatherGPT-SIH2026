@@ -10,7 +10,7 @@ const view = {
   current: {
     temp: 30, condition: 'clear sky', feels_like: 32, humidity: 40,
     precipitation_chance: 0.1, wind_speed: 8, aqi: 55,
-    source: 'Open-Meteo', data_tier: 'exact',
+    source: 'WeatherAPI', data_tier: 'exact',
   },
   hourly: [{ time: '2026-09-07T09:00', temp: 30, condition: 'clear sky', precipitation_chance: 0.1 }],
   recommendation: { title: 'Good time for a short outing', message: 'Nice out.' },

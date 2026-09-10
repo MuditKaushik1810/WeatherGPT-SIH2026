@@ -1,7 +1,7 @@
 {
   "answer": "Yes — 68% chance of rain tomorrow evening in Delhi.",
   "data_tier": "exact",
-  "source": "Open-Meteo",
+  "source": "WeatherAPI",
   "query_class": "realtime",
   "audio_url": null
 }
