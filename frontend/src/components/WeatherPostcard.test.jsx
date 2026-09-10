@@ -9,7 +9,7 @@ const weather = {
   precipitation_chance: 0.3,
   wind_speed: 12,
   aqi: 86,
-  source: 'Open-Meteo',
+  source: 'WeatherAPI',
   data_tier: 'exact',
 }
 
@@ -21,7 +21,7 @@ it('renders the contract metrics with correct units and rain %', () => {
   expect(screen.getByText('12 km/h')).toBeInTheDocument()
   expect(screen.getByText('86')).toBeInTheDocument()
   // provenance chip is present
-  expect(screen.getByText(/Open-Meteo · Exact/)).toBeInTheDocument()
+  expect(screen.getByText(/WeatherAPI · Exact/)).toBeInTheDocument()
 })
 
 it('shows an em dash for a null metric instead of "null"', () => {
