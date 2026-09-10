@@ -28,7 +28,17 @@ it('renders recommended crops from the crop-planning shape and labels the demo d
 
   expect(await screen.findByText('Wheat')).toBeInTheDocument()
   expect(screen.getByText(/March–April/)).toBeInTheDocument()
-  expect(screen.getByText(/not live/i)).toBeInTheDocument() // demo provenance is visible
+  expect(screen.getByText(/Demo data/i)).toBeInTheDocument() // demo provenance is visible
+})
+
+it('shows live provenance when the composite comes back from the backend', async () => {
+  fetchCropPlanning.mockResolvedValue({
+    ...view, data_tier: 'exact', source: 'WeatherAPI + WeatherGPT crop rules',
+  })
+  render(<CropPlanning />)
+
+  expect(await screen.findByText('Wheat')).toBeInTheDocument()
+  expect(screen.getByText(/Live · WeatherAPI/)).toBeInTheDocument()
 })
 
 it('leaving Farmer Mode switches the persona back to normal', async () => {
