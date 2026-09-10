@@ -375,22 +375,28 @@ This is worth treating as a first-order design concern, not a Sprint 4 add-on, s
 
 **This is the engine behind Crop Watch** (monitoring an already-planted crop), not Crop Planning. It answers: *how stressed is this specific crop by current/recent weather, and why?*
 
-**The backbone — a weighted crop-stress score.** Each crop has a curated optimal range per weather parameter (temperature, humidity, soil moisture, rainfall), sourced from ICAR/GKMS — see the crop rule table in Section 4, Sprint 3. For each parameter, score how close the current/recent reading sits to the middle of that crop's optimal range, on 0–1 (1 = ideal, 0 = far outside):
+**The backbone — a weighted crop-stress score.** The two weather parameters with a well-defined per-crop optimal band — **temperature and soil moisture** — are the fit terms (temperature sourced/cited; soil moisture an approximation, see below). **Humidity is deliberately NOT a fit term** — see "Humidity is crop- and stage-specific" below. For each fit parameter, score how well the current/recent reading fits that crop's optimal range, on 0–1: **1.0 anywhere inside the range** (being in-range is ideal, edges included), with a linear fall-off outside, reaching 0 one band-width beyond an edge — a *plateau*, not a triangular peak (which would wrongly score the range's own edges as maximum stress):
 
 ```python
-def parameter_score(actual, opt_low, opt_high):
-    mid = (opt_low + opt_high) / 2
-    half = (opt_high - opt_low) / 2 or 1
-    return max(0.0, 1 - abs(actual - mid) / half)
+def parameter_score(actual, low, high):
+    if low <= actual <= high:
+        return 1.0
+    span = (high - low) or 1.0
+    dist = (low - actual) if actual < low else (actual - high)
+    return max(0.0, 1 - dist / span)
 ```
 
-Combine with weights (temperature dominates, then humidity and soil moisture, then rainfall), and invert to a risk:
+Combine with weights (temperature dominates), and invert to a risk:
 
 ```
-crop_fit    = 0.35·temp + 0.25·humidity + 0.25·soil_moisture + 0.15·rainfall
+crop_fit    = 0.60·temperature + 0.40·soil_moisture
 risk (0–1)  = 1 − crop_fit
 risk_score  = round(risk × 100)      # 0–100, shown on the gauge
 ```
+
+**Humidity is crop- and stage-specific, not a generic band.** A per-crop "humidity comfort band" is fake precision, and a blanket rule like `humidity > 90% → bad` is wrong-in-direction for some crops — humidity's real signal is **disease susceptibility at vulnerable growth stages**. So humidity is expressed through the **stage-aware disease threat**: each crop's key disease has a temperature+humidity favouring rule *and* `susceptible_stages`. The threat fires when the weather favours the disease, and its **level and explanation are modulated by whether the crop is at a stage the disease actually damages** — "At the Flowering stage — a susceptible window for blast — 96% humidity and 26°C favour it" rather than an unexplained humidity warning. This is the concrete, hard-to-copy domain logic (the reason Farmer Mode is the flagship): crop × stage × weather, not a threshold.
+
+**Rainfall is a threat, not a fit term either.** Live precipitation (a probability, or a short-term amount) and a crop's *seasonal* rainfall requirement are different scales and can't be compared as a fit deviation, so rainfall surfaces as an explicit **threat** (heavy rain → drainage / waterlogging / fungal risk). The two fit parameters (temperature, soil moisture) are exactly the ones with a clean current-value-vs-optimal-band comparison. **Soil-moisture units:** Open-Meteo reports volumetric water content (m³/m³, ~0.05–0.45), so each crop's `soil_moisture_opt` band is curated in those same units — not a 0–1 fraction-of-capacity.
 
 **Fail-soft weighting.** Any parameter can be missing (a source failed soft — CLAUDE.md's data contract). When one is absent, compute over the parameters we *do* have and **renormalize the remaining weights to sum to 1** — never fabricate a value to fill the gap. **Soil moisture** is fetched best-effort from **Open-Meteo** (a separate call, like AQI — WeatherAPI doesn't report it), so it participates when available and drops out cleanly when Open-Meteo is unreachable (429/outage) rather than breaking the score.
 
@@ -535,7 +541,7 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 `GET /farmer/risk-score` — the weighted crop-stress score (Section 3.7). `risk_score` is 0–100, `risk_level` a band. `components` are the per-parameter fit scores (0–1) that back the number and name the problem; a missing parameter is omitted and its weight renormalized away (fail-soft), so `components` carries only the parameters that were actually available.
 ```json
 { "crop": "rice", "risk_score": 72, "risk_level": "high",
-  "components": { "temperature": 0.55, "humidity": 0.70, "soil_moisture": 0.30, "rainfall": 0.60 },
+  "components": { "temperature": 0.55, "soil_moisture": 0.30 },
   "problem": "Low soil moisture + high temperature stress",
   "data_tier": "exact", "source": "WeatherAPI + Open-Meteo (soil moisture)" }
 ```
@@ -566,9 +572,9 @@ This is the piece that makes frontend and backend work genuinely independent (Se
   "location": "Noida, Uttar Pradesh",
   "crop": "Wheat", "days_after_sowing": 48, "crop_stage": "Vegetative", "next_stage": "Flowering",
   "risk_score": 62, "risk_level": "Moderate",
-  "components": { "temperature": 0.6, "humidity": 0.45, "soil_moisture": 0.5, "rainfall": 0.7 },
+  "components": { "temperature": 0.6, "soil_moisture": 0.5 },
   "threats": [
-    { "id": "disease", "label": "Disease", "level": "High", "detail": "High humidity + mild temperatures favour fungal disease for wheat at this stage." }
+    { "id": "disease", "label": "Disease", "level": "High", "detail": "At the Flowering stage — a susceptible window for yellow rust — 92% humidity and 14°C favour it." }
   ],
   "recommended_action": { "title": "Protect against fungal disease",
     "items": ["Scout lower leaves for early lesions", "Hold off overhead irrigation", "Prepare a preventive fungicide if humidity persists"] },
@@ -689,9 +695,9 @@ This replaces the hour-by-hour hackathon-day plan with a day-based sprint plan f
 
    Source this from ICAR's seasonal Kharif/Rabi Agro-Advisories, IMD-ICAR-CRIDA District-level Crop Weather Calendars, and state Gramin Krishi Mausam Sewa (GKMS) bulletins — all public. Cite these sources explicitly in the pitch; naming real institutional sources materially strengthens credibility over an unsourced rule table.
 
-   **Crop list (locked, Sprint 3):** the eight staples above **plus potato, peas, and tomato, and a generic pulses entry** — covering the crops shown in the current UI and the risk-model research set. A broader table means more curated numbers to get right: every optimal range (and per-crop key-disease condition) not yet verified against ICAR/GKMS **ships flagged as provisional** in the data file and is surfaced to a teammate for verification before the demo — never presented as authoritative while unverified (CLAUDE.md).
+   **Crop list (locked, Sprint 3):** wheat, rice, maize, cotton, soybean, groundnut, mustard, gram, pea, potato, tomato, lentil — the eight staples plus potato, pea, tomato, and lentil. **Optimal-temperature bands and key-disease conditions are sourced and cited per crop** in `crop_rules.json` (ICAR / ICRISAT / TNAU Agritech / IMD Mausam, plus standard extension and peer-reviewed plant-pathology references), so the response's `provisional` flag is now false. The **humidity comfort bands** and the **volumetric soil-moisture bands** remain documented **engineering approximations** — a crop's optimal volumetric soil moisture (m³/m³) is not an ICAR-published quantity (ICAR schedules irrigation by IW/CPE ratio or crop coefficients), and humidity comfort is stage/variety dependent. A domain teammate should still sanity-check all bands against local package-of-practices before the final demo.
 3. Harvest/action-timing advisory logic (forecast × growth stage × rule table).
-4. **Crop Risk Index — weighted crop-stress model** (Section 3.7): per-parameter fit scores (temperature / humidity / soil-moisture / rainfall) against each crop's curated optimal range, weighted `0.35·T + 0.25·H + 0.25·M + 0.15·R`, inverted to a 0–100 risk and mapped to a Low/Moderate/High/Very-High band. **Fail-soft:** renormalize the weights over whatever parameters are available. **Soil moisture** is fetched best-effort from Open-Meteo (a separate call). A per-crop **key-disease** rule adds the explained "disease" threat. Averaged over a rolling ~24h window. Source the optimal ranges + disease conditions from ICAR/GKMS before treating them as authoritative — this drives real advice, so it earns extra sourcing care; any number not yet verified ships **clearly flagged as provisional**.
+4. **Crop Risk Index — weighted crop-stress model** (Section 3.7): fit scores for **temperature and soil moisture** against each crop's optimal range, weighted `0.60·T + 0.40·soil`, inverted to a 0–100 risk and banded. **Fail-soft:** renormalize the weights over whatever's available. **Humidity is not a fit term** — its risk is crop- and stage-specific, so it drives the **stage-aware disease threat** (each crop's key disease has a temp+humidity favouring rule *and* `susceptible_stages`; the threat's level + explanation depend on the crop's current stage). **Rainfall** is an explicit threat too (heavy rain), not a fit term. **Soil moisture** is best-effort from Open-Meteo (volumetric m³/m³). The temperature bands + disease conditions are **sourced and cited** per crop in `crop_rules.json`; the humidity and volumetric soil-moisture bands are documented **approximations** (a volumetric soil-moisture optimum isn't ICAR-published).
 5. **Threats + advisory from the score**: the weakest parameter(s) name the `threats[]` and select a curated `recommended_action`, so every warning is *explained* (scope §3), never a bare gauge. The Trend Engine's historical-baseline-deviation term (below) is an additive refinement to the score, not a v1 blocker.
 6. Free-text crop Q&A routed through the Sprint 2 LLM pipeline with the rule table injected as grounding context.
 

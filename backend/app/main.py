@@ -20,6 +20,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 from app.core.degradation_ladder import get_weather  # noqa: E402  (after load_dotenv, intentionally)
 from app.core.home_view import get_home_view  # noqa: E402
 from app.core.chat import answer_query  # noqa: E402
+from app.farmer.crop_watch import get_crop_watch  # noqa: E402
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
@@ -98,3 +99,15 @@ def chat(request: ChatRequest):
         context_location=request.context_location,
         history=history,
     )
+
+
+@app.get("/farmer/crop-watch")
+def farmer_crop_watch(crop: str, location: str, days_after_sowing: int | None = None):
+    """
+    Composite Crop Watch view for an already-planted crop (Section 3.10): the
+    weighted Crop Risk Index (§3.7), explained weather threats, growth stage, and a
+    curated recommended action. Never bare-refuses — returns a stable, honest shape
+    even for an unknown crop or unresolved location. `provisional: true` flags that
+    the crop rule thresholds still need ICAR/GKMS verification.
+    """
+    return get_crop_watch(crop, location, days_after_sowing)
