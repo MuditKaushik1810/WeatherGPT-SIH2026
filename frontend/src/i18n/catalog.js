@@ -103,6 +103,7 @@ const en = {
   'settings.cropLabel': 'Crop',
   'settings.placeholderCrop': 'e.g. Wheat',
   'settings.farmLocationLabel': 'Farm location',
+  'settings.sowingDate': 'Sowing date',
   'settings.placeholderFarm': 'e.g. Karnal, Haryana',
 
   'chat.newChat': 'New chat',
@@ -207,6 +208,7 @@ const hi = {
   'settings.cropLabel': 'फ़सल',
   'settings.placeholderCrop': 'जैसे गेहूँ',
   'settings.farmLocationLabel': 'खेत का स्थान',
+  'settings.sowingDate': 'बुवाई की तारीख',
   'settings.placeholderFarm': 'जैसे करनाल, हरियाणा',
 
   'chat.newChat': 'नई चैट',
@@ -311,6 +313,7 @@ const bn = {
   'settings.cropLabel': 'ফসল',
   'settings.placeholderCrop': 'যেমন গম',
   'settings.farmLocationLabel': 'খামারের অবস্থান',
+  'settings.sowingDate': 'বপনের তারিখ',
   'settings.placeholderFarm': 'যেমন কার্নাল, হরিয়ানা',
 
   'chat.newChat': 'নতুন চ্যাট',
@@ -415,6 +418,7 @@ const ta = {
   'settings.cropLabel': 'பயிர்',
   'settings.placeholderCrop': 'எ.கா. கோதுமை',
   'settings.farmLocationLabel': 'பண்ணை இருப்பிடம்',
+  'settings.sowingDate': 'விதைப்பு தேதி',
   'settings.placeholderFarm': 'எ.கா. கர்னால், ஹரியானா',
 
   'chat.newChat': 'புதிய அரட்டை',
@@ -519,6 +523,7 @@ const mr = {
   'settings.cropLabel': 'पीक',
   'settings.placeholderCrop': 'उदा. गहू',
   'settings.farmLocationLabel': 'शेताचे स्थान',
+  'settings.sowingDate': 'पेरणीची तारीख',
   'settings.placeholderFarm': 'उदा. कर्नाल, हरियाणा',
 
   'chat.newChat': 'नवीन चॅट',
@@ -623,6 +628,7 @@ const pa = {
   'settings.cropLabel': 'ਫ਼ਸਲ',
   'settings.placeholderCrop': 'ਜਿਵੇਂ ਕਣਕ',
   'settings.farmLocationLabel': 'ਖੇਤ ਦਾ ਟਿਕਾਣਾ',
+  'settings.sowingDate': 'ਬਿਜਾਈ ਦੀ ਤਾਰੀਖ',
   'settings.placeholderFarm': 'ਜਿਵੇਂ ਕਰਨਾਲ, ਹਰਿਆਣਾ',
 
   'chat.newChat': 'ਨਵੀਂ ਚੈਟ',

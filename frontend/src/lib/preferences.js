@@ -12,6 +12,7 @@ const KEYS = {
   savedLocations: 'weathergpt.savedLocations',
   farmerCrop: 'weathergpt.farmer.crop',
   farmerLocation: 'weathergpt.farmer.location',
+  farmerSowingDate: 'weathergpt.farmer.sowingDate',
   persona: 'weathergpt.persona',
 }
 
@@ -78,7 +79,21 @@ export function removeSavedLocation(name) {
 }
 
 export function getFarmerPrefs() {
-  return { crop: read(KEYS.farmerCrop) || '', location: read(KEYS.farmerLocation) || '' }
+  return {
+    crop: read(KEYS.farmerCrop) || '',
+    location: read(KEYS.farmerLocation) || '',
+    sowingDate: read(KEYS.farmerSowingDate) || '',
+  }
+}
+
+// Whole days since the sowing date (ISO "YYYY-MM-DD"), or null when it's unset,
+// invalid, or in the future. Used to derive the crop's growth stage in Crop Watch.
+export function daysAfterSowing(sowingDate = read(KEYS.farmerSowingDate)) {
+  if (!sowingDate) return null
+  const sown = new Date(sowingDate)
+  if (Number.isNaN(sown.getTime())) return null
+  const days = Math.floor((Date.now() - sown.getTime()) / 86400000)
+  return days >= 0 ? days : null
 }
 
 // The active product persona. Farmer Mode is a separate persona (not a nav tab);
@@ -93,7 +108,7 @@ export function setPersona(persona) {
   else remove(KEYS.persona)
 }
 
-export function setFarmerPrefs({ crop, location }) {
+export function setFarmerPrefs({ crop, location, sowingDate }) {
   if (crop !== undefined) {
     const value = (crop || '').trim()
     if (value) write(KEYS.farmerCrop, value)
@@ -103,5 +118,10 @@ export function setFarmerPrefs({ crop, location }) {
     const value = (location || '').trim()
     if (value) write(KEYS.farmerLocation, value)
     else remove(KEYS.farmerLocation)
+  }
+  if (sowingDate !== undefined) {
+    const value = (sowingDate || '').trim()
+    if (value) write(KEYS.farmerSowingDate, value)
+    else remove(KEYS.farmerSowingDate)
   }
 }
