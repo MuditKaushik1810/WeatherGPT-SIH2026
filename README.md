@@ -8,6 +8,13 @@
 
 WeatherGPT is a grounded, proactive, role-aware weather-intelligence platform for IMD/MoES. It turns live weather data, forecasts, alerts, and curated domain rules into clear conversational guidance, including multilingual and voice-enabled access.
 
+## Live demo
+
+- **App (frontend):** https://weathergpt-sih2026-frontend.onrender.com
+- **API (backend):** https://weathergpt-sih2026.onrender.com
+
+> The backend runs on a free tier that sleeps after inactivity, so the **first request may take ~40–60 seconds to wake the server** — the page loads instantly, and live weather appears once the server is up (refresh if needed).
+
 ## Problem statement
 
 Weather data is spread across portals, bulletins, satellite products, and forecast systems. Individuals, farmers, travellers, and disaster stakeholders need fast, contextual, actionable answers rather than raw data alone.
@@ -24,6 +31,18 @@ WeatherGPT combines a React web application with a FastAPI service. It retrieves
 - Farmer Mode: crop planning and crop-watch advisories
 - Route-aware travel planning and disaster-awareness views
 - Traceable data provenance and an API test suite in continuous integration
+
+## Screenshots
+
+| Home | Grounded chat | Farmer Mode |
+|------|---------------|-------------|
+| ![Home](assets/screenshots/01-home-weather.png) | ![Chat](assets/screenshots/02-grounded-chat.png) | ![Farmer Mode](assets/screenshots/03-farmer-mode.png) |
+
+| Travel planner | Disaster view | Multilingual (Hindi) |
+|----------------|---------------|----------------------|
+| ![Travel](assets/screenshots/04-travel-planner.png) | ![Disaster](assets/screenshots/05-disaster-view.png) | ![Hindi](assets/screenshots/06-multilingual-hindi.png) |
+
+More views in [`assets/screenshots/`](assets/screenshots/).
 
 ## Technology stack
 
@@ -113,9 +132,18 @@ language, farmer preferences) lives off the header menu, and the **chat
 conversation persists** on-device (~1 day) and restores on return. Vitest suite
 in CI.
 
-Still open in Sprint 2: native-speaker review of the bn/ta/mr/pa UI strings, and
-migrating the Disaster/Travel/Farmer screens onto the i18n keys. Next up is
-**Sprint 3** — the Farmer Advisory backend (crop rules, Disease Suitability Model,
-risk scoring) and the Trip Planner backend. A real IMD warnings connector
-(currently a fail-soft stub) also remains. See the Architecture doc, Section 8,
-for the full living status and backlog.
+**Sprint 3 (flagship features) — shipped, end-to-end.** The **Farmer Advisory**
+backend is live: a weighted **Crop Risk Index** (temperature + soil-moisture fit
+with a stage-aware disease threat) over a curated, sourced 12-crop rule table,
+served by `GET /farmer/crop-watch`, plus `GET /farmer/crop-planning` (season ×
+temperature-fit crop recommendations) — both wired to the Farmer Mode screens. The
+**Trip Planner** backend is live too (`POST /trip-plan`): our geocoding → Geoapify
+routing → sampled checkpoints rated from the forecast at each ETA, with nearby
+facilities — wired to the Travel tab. The Farmer screens are localized onto the
+i18n keys.
+
+Still open: native-speaker review of the bn/ta/mr/pa UI strings; migrating the
+Disaster/Travel screens onto the i18n keys; a real IMD warnings connector
+(currently a fail-soft stub); and Sprint 4 (proactive alerting, disaster safety
+guide, PWA/offline, digest). See the Architecture doc, Section 8, for the full
+living status and backlog.
