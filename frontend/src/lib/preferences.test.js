@@ -1,7 +1,7 @@
 import {
   getDefaultLocation, setDefaultLocation,
   getSavedLocations, addSavedLocation, removeSavedLocation,
-  getFarmerPrefs, setFarmerPrefs,
+  getFarmerPrefs, setFarmerPrefs, daysAfterSowing,
   getPersona, setPersona,
 } from './preferences'
 
@@ -31,13 +31,24 @@ it('tolerates a corrupt saved-locations value', () => {
 })
 
 it('stores farmer preferences independently', () => {
-  expect(getFarmerPrefs()).toEqual({ crop: '', location: '' })
+  expect(getFarmerPrefs()).toEqual({ crop: '', location: '', sowingDate: '' })
   setFarmerPrefs({ crop: 'Wheat' })
-  expect(getFarmerPrefs()).toEqual({ crop: 'Wheat', location: '' })
+  expect(getFarmerPrefs()).toEqual({ crop: 'Wheat', location: '', sowingDate: '' })
   setFarmerPrefs({ location: 'Karnal' })
-  expect(getFarmerPrefs()).toEqual({ crop: 'Wheat', location: 'Karnal' })
+  expect(getFarmerPrefs()).toEqual({ crop: 'Wheat', location: 'Karnal', sowingDate: '' })
   setFarmerPrefs({ crop: '' })
-  expect(getFarmerPrefs()).toEqual({ crop: '', location: 'Karnal' })
+  expect(getFarmerPrefs()).toEqual({ crop: '', location: 'Karnal', sowingDate: '' })
+})
+
+it('stores a sowing date and derives days-after-sowing', () => {
+  setFarmerPrefs({ sowingDate: '2026-01-01' })
+  expect(getFarmerPrefs().sowingDate).toBe('2026-01-01')
+
+  const d = daysAfterSowing('2026-01-01')
+  expect(typeof d).toBe('number')
+  expect(d).toBeGreaterThan(0)
+  expect(daysAfterSowing('')).toBeNull()          // unset
+  expect(daysAfterSowing('2999-01-01')).toBeNull() // future date
 })
 
 it('defaults to the normal persona and persists the farmer persona', () => {

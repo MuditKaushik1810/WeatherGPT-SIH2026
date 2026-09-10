@@ -21,6 +21,7 @@ function Settings() {
   const initialFarmer = getFarmerPrefs()
   const [crop, setCrop] = useState(initialFarmer.crop)
   const [farmLoc, setFarmLoc] = useState(initialFarmer.location)
+  const [sowDate, setSowDate] = useState(initialFarmer.sowingDate || '')
   const [flash, setFlash] = useState('') // which section just saved: 'default' | 'farmer'
 
   const saveDefault = (event) => {
@@ -45,7 +46,7 @@ function Settings() {
 
   const saveFarmer = (event) => {
     event.preventDefault()
-    setFarmerPrefs({ crop, location: farmLoc })
+    setFarmerPrefs({ crop, location: farmLoc, sowingDate: sowDate })
     setFlash('farmer')
   }
 
@@ -167,6 +168,16 @@ function Settings() {
                 onChange={(event) => { setFarmLoc(event.target.value); setFlash('') }}
                 placeholder={t('settings.placeholderFarm')}
                 aria-label={t('settings.farmLocationLabel')}
+              />
+            </label>
+            <label className="settings-field">
+              <span className="settings-field-label">{t('settings.sowingDate')}</span>
+              <input
+                className="settings-input"
+                type="date"
+                value={sowDate}
+                onChange={(event) => { setSowDate(event.target.value); setFlash('') }}
+                aria-label={t('settings.sowingDate')}
               />
             </label>
             <button className="settings-save" type="submit">

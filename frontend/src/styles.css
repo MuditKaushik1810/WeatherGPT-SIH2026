@@ -2887,3 +2887,23 @@ button:focus-visible {
 .header-menu-item:hover {
   background: #eef3ea;
 }
+
+/* Crop Watch risk badge (Farmer Mode) */
+.crop-risk-badge {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #eef3ea;
+  color: #33543c;
+  white-space: nowrap;
+}
+.crop-risk-badge.risk-high, .crop-risk-badge.risk-very-high {
+  background: #f6dfd9;
+  color: #8a3b34;
+}
+.crop-risk-badge.risk-moderate {
+  background: #f4ecd6;
+  color: #7a5a1e;
+}
