@@ -586,9 +586,8 @@ button:focus-visible {
   height: 100%;
   object-fit: contain;
   display: block;
+  aspect-ratio: 16 / 7;
 }
-    aspect-ratio: 16 / 7; height: auto;
-  }
 
   .postcard-weather {
     padding: 20px 22px;
@@ -2896,6 +2895,10 @@ button:focus-visible {
 .header-menu-item:hover {
   background: #eef3ea;
 }
+
+
+
+
 
 
 
