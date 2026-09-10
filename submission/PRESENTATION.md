@@ -1,9 +1,15 @@
 # Final presentation
 
-Place the final SIH presentation in this folder as `WeatherGPT_SIH2026_Presentation.pptx` when it is suitable for GitHub.
+The SIH 2026 presentation deck for WeatherGPT (PS SIH26068) is included in this
+folder:
 
-If the file is too large, replace the line below with a public Google Drive or OneDrive **viewer** link (verify it while logged out).
+**File:** [`WEATHERGPT-SIH26068-TheHonouredOne.pptx`](WEATHERGPT-SIH26068-TheHonouredOne.pptx)
 
-**Presentation link:** _To be added before submission_
+If GitHub does not preview the `.pptx` inline, download it from the file view, or
+open it via a public Google Drive / OneDrive **viewer** link (verify it while
+logged out before submitting):
 
-Suggested slide order: problem, proposed solution, architecture, key features, implementation, screenshots/demo, impact, and future scope.
+**Presentation link:** _add a public viewer link here if needed_
+
+Slide order: problem, proposed solution, architecture, key features,
+implementation, screenshots/demo, impact, and future scope.
