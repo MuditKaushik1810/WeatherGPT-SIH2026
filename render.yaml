@@ -35,3 +35,9 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Geoapify key — routing, reverse geocoding, and nearby-facility lookup for
+      # the Trip Planner (POST /trip-plan, see app/connectors/geoapify.py).
+      # sync:false (set in the dashboard). If unset, /trip-plan fails soft to a
+      # "routing unavailable" shape — the rest of the app is unaffected.
+      - key: GEOAPIFY_API_KEY
+        sync: false

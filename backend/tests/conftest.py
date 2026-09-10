@@ -22,5 +22,5 @@ def no_external_api_keys(monkeypatch):
     with monkeypatch/mock. Keeps the suite deterministic regardless of a
     developer's shell env, and honors CLAUDE.md's "never hit live endpoints".
     """
-    for key in ("WEATHERAPI_KEY", "GEMINI_API_KEY", "GROQ_API_KEY"):
+    for key in ("WEATHERAPI_KEY", "GEMINI_API_KEY", "GROQ_API_KEY", "GEOAPIFY_API_KEY"):
         monkeypatch.delenv(key, raising=False)
