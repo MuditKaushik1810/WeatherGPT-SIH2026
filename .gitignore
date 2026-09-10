@@ -18,3 +18,9 @@ Thumbs.db
 # Editors
 .vscode/
 .idea/
+
+# Internal AI-assistant and team-workflow notes (not part of the SIH submission)
+AGENTS.md
+CLAUDE.md
+.cursorrules
+docs/*Team_Collaboration*
