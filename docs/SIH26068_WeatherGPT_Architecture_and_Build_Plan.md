@@ -104,6 +104,8 @@ The platform stays genuinely general-purpose at its core (satisfying the PS's li
 > **Crop Planning is a crop-*selection* feature, not a crop-monitoring or farm-management system. Crop Watch is responsible for post-planting monitoring and weather-risk advisory.** (This one sentence is the guard against the scope confusion that muddled the earlier branches: "what to plant" and "what's happening to what I planted" are different questions with different UIs and different backends. They may share infrastructure — location/weather services, crop metadata, crop rules, climate data, the farmer profile — but their user-facing purposes stay separate.)
 >
 > Both screens ship **demo-fixture-first** with explicit provenance (`data_tier: "demo"`, `source` naming the fixture) and a **documented, stable response shape** (Section 3.10), so swapping a fixture for a real backend call needs no UI redesign and the fixture never becomes an undocumented de-facto contract. Backend lives under a dedicated **`/farmer/*`** namespace; **Crop Watch is served by a single composite `/farmer/crop-watch`** endpoint (Section 3.10), with `/farmer/crop-profile`, `/farmer/risk-score`, `/farmer/advisory` available as reusable sub-endpoints.
+>
+> **A persona, not a tab (frontend, shipped).** Farmer Mode is a persisted product **persona** — the app has a *normal user* and a *farmer user*. It is entered from the **header menu** ("🌾 Switch to Farmer Mode"), lands on **Crop Watch**, and the choice is **persisted on the device** (`lib/preferences`) so a farmer reopens straight into Farmer Mode; the "Farmer Mode" pill switches back to the normal persona. Inside, the two workflows share the farmer-local nav (Crop Planning ↔ Crop Watch) and are never represented as Home/Travel/Disaster.
 
 ### 2.3 Timeline Context: 12–13 Day Internal-Round Build
 
@@ -113,7 +115,7 @@ Everything above still holds — the differentiation argument, the persona struc
 
 **What this timeline newly makes feasible, beyond the hackathon-scoped plan:**
 
-- **A wider, better-sourced crop list** (8 crops instead of 3–5 — see Section 4, Sprint 3) since there's time to actually research ICAR/GKMS advisory data properly rather than picking whichever crops are fastest to guess at.
+- **A wider, better-sourced crop list** (12 crops — see Section 4, Sprint 3) since there's time to actually research ICAR/GKMS advisory data properly rather than picking whichever crops are fastest to guess at.
 - **A third language**, and doing multilingual support properly (tested across all three, not just demoed in one) rather than a single flawless language plus a risky bonus.
 - **A genuine offline/PWA layer** — this is worth calling out specifically because it directly serves the PS's own "rural accessibility" framing: caching the last-fetched forecast/advisory client-side so the app remains useful on a spotty connection, installable as a home-screen PWA without needing an app store. This was explicitly out of scope for a 36-hour build; it's a strong, on-theme addition now.
 - **A lightweight Disaster Manager / Stakeholder view** — an aggregated, multi-region view of active alerts (reusing the same alerting backend, just a different front-end lens), which more concretely satisfies the PS's explicit mention of "disaster managers and government agencies" than the general chat interface alone does.
@@ -179,7 +181,7 @@ flowchart TB
     subgraph Farmer["Farmer Advisory Mode — flagship differentiator"]
         CROPPROFILE[("Crop Profile\ncrop, field location, sowing date")]
         RULETABLE[("Curated Crop Rule Table\nsowing windows, thresholds,\npest/disease triggers — sourced\nfrom ICAR / state advisories")]
-        SUITABILITY["Disease Suitability Model\ncontinuous temp/humidity/stage\nscores -> 24h rolling average"]
+        SUITABILITY["Crop Risk Index\ntemp+soil fit (0-100) +\nstage-aware disease threat"]
         RISKCALC["Crop Risk Index Calculator\n(disease suitability + extreme-\nweather proximity + historical\nbaseline deviation)"]
         ADVISORY["Harvest/Action Timing Advisory"]
     end
@@ -288,8 +290,8 @@ flowchart TB
 | Generation | LLM call | Generates the final natural-language answer, forbidden from bare "no data" replies | Gemini Flash free tier, or Groq | Free tier |
 | Generation | LLM response cache | Caches full grounded answers for repeated/similar queries, cutting LLM call volume further | Same cache store as above | Free |
 | Farmer Advisory | Crop profile | Persistent per-user crop, field location, sowing date | Postgres table | Free |
-| Farmer Advisory | Curated crop rule table | Sowing windows, ideal stage-thresholds, pest/disease triggers for 8 crops, sourced from ICAR/GKMS advisories | Static JSON/CSV, hand-curated | Free |
-| Farmer Advisory | Disease Suitability Model | Continuous 0–1 temperature/humidity/growth-stage scores per crop-disease pair (bell-curve/ramp functions, not binary thresholds), averaged over a rolling 24h window | Plain Python arithmetic — not ML; see Section 3.7 | Free |
+| Farmer Advisory | Curated crop rule table | Optimal temperature band, soil-moisture band, and a key-disease favouring rule (+ susceptible stages) for 12 crops; temperature + disease conditions sourced/cited from ICAR/GKMS + plant-pathology refs | Static JSON, hand-curated | Free |
+| Farmer Advisory | Crop Risk Index | Weighted crop-stress fit (temperature + soil moisture) → 0–100, plus a **stage-aware** key-disease threat and a heavy-rain threat; every threat explained | Plain Python arithmetic — not ML; see Section 3.7 | Free |
 | Farmer Advisory | Crop Risk Index calculator | Combines the Disease Suitability score with extreme-weather proximity and the Trend Engine's historical-baseline deviation into one 0–100 score | Plain Python arithmetic | Free |
 | Farmer Advisory | Harvest/action timing advisory | Combines forecast + rule table into a concrete recommendation | Plain Python, feeds into grounding assembler | Free |
 | Trend Engine | Multi-year baseline | Moving average per location/variable from the preloaded historical dataset | Plain Python / pandas | Free |
@@ -375,22 +377,28 @@ This is worth treating as a first-order design concern, not a Sprint 4 add-on, s
 
 **This is the engine behind Crop Watch** (monitoring an already-planted crop), not Crop Planning. It answers: *how stressed is this specific crop by current/recent weather, and why?*
 
-**The backbone — a weighted crop-stress score.** Each crop has a curated optimal range per weather parameter (temperature, humidity, soil moisture, rainfall), sourced from ICAR/GKMS — see the crop rule table in Section 4, Sprint 3. For each parameter, score how close the current/recent reading sits to the middle of that crop's optimal range, on 0–1 (1 = ideal, 0 = far outside):
+**The backbone — a weighted crop-stress score.** The two weather parameters with a well-defined per-crop optimal band — **temperature and soil moisture** — are the fit terms (temperature sourced/cited; soil moisture an approximation, see below). **Humidity is deliberately NOT a fit term** — see "Humidity is crop- and stage-specific" below. For each fit parameter, score how well the current/recent reading fits that crop's optimal range, on 0–1: **1.0 anywhere inside the range** (being in-range is ideal, edges included), with a linear fall-off outside, reaching 0 one band-width beyond an edge — a *plateau*, not a triangular peak (which would wrongly score the range's own edges as maximum stress):
 
 ```python
-def parameter_score(actual, opt_low, opt_high):
-    mid = (opt_low + opt_high) / 2
-    half = (opt_high - opt_low) / 2 or 1
-    return max(0.0, 1 - abs(actual - mid) / half)
+def parameter_score(actual, low, high):
+    if low <= actual <= high:
+        return 1.0
+    span = (high - low) or 1.0
+    dist = (low - actual) if actual < low else (actual - high)
+    return max(0.0, 1 - dist / span)
 ```
 
-Combine with weights (temperature dominates, then humidity and soil moisture, then rainfall), and invert to a risk:
+Combine with weights (temperature dominates), and invert to a risk:
 
 ```
-crop_fit    = 0.35·temp + 0.25·humidity + 0.25·soil_moisture + 0.15·rainfall
+crop_fit    = 0.60·temperature + 0.40·soil_moisture
 risk (0–1)  = 1 − crop_fit
 risk_score  = round(risk × 100)      # 0–100, shown on the gauge
 ```
+
+**Humidity is crop- and stage-specific, not a generic band.** A per-crop "humidity comfort band" is fake precision, and a blanket rule like `humidity > 90% → bad` is wrong-in-direction for some crops — humidity's real signal is **disease susceptibility at vulnerable growth stages**. So humidity is expressed through the **stage-aware disease threat**: each crop's key disease has a temperature+humidity favouring rule *and* `susceptible_stages`. The threat fires when the weather favours the disease, and its **level and explanation are modulated by whether the crop is at a stage the disease actually damages** — "At the Flowering stage — a susceptible window for blast — 96% humidity and 26°C favour it" rather than an unexplained humidity warning. This is the concrete, hard-to-copy domain logic (the reason Farmer Mode is the flagship): crop × stage × weather, not a threshold.
+
+**Rainfall is a threat, not a fit term either.** Live precipitation (a probability, or a short-term amount) and a crop's *seasonal* rainfall requirement are different scales and can't be compared as a fit deviation, so rainfall surfaces as an explicit **threat** (heavy rain → drainage / waterlogging / fungal risk). The two fit parameters (temperature, soil moisture) are exactly the ones with a clean current-value-vs-optimal-band comparison. **Soil-moisture units:** Open-Meteo reports volumetric water content (m³/m³, ~0.05–0.45), so each crop's `soil_moisture_opt` band is curated in those same units — not a 0–1 fraction-of-capacity.
 
 **Fail-soft weighting.** Any parameter can be missing (a source failed soft — CLAUDE.md's data contract). When one is absent, compute over the parameters we *do* have and **renormalize the remaining weights to sum to 1** — never fabricate a value to fill the gap. **Soil moisture** is fetched best-effort from **Open-Meteo** (a separate call, like AQI — WeatherAPI doesn't report it), so it participates when available and drops out cleanly when Open-Meteo is unreachable (429/outage) rather than breaking the score.
 
@@ -398,35 +406,16 @@ risk_score  = round(risk × 100)      # 0–100, shown on the gauge
 
 **Why the threat fired — the explanation the UI requires.** The per-parameter scores *are* the explanation (scope §3: never present an unexplained warning). The weakest parameter(s) name the problem ("low soil moisture + high temperature stress"), which drives the `threats[]` list and selects the curated `recommended_action`. This is what makes Crop Watch explainable rather than a black-box gauge, and it maps `risk_score` to a `risk_level` band (Low / Moderate / High / Very High).
 
-**Disease suitability — one component of the index, not the whole thing.** Beyond raw parameter fit, a per-crop **key-disease** rule contributes a "disease" threat when conditions favour that crop's characteristic weather-linked disease/pest. That sub-score is itself continuous rather than a rigid threshold, for the same biological reason:
+**Disease suitability — one component of the index, not the whole thing.** Beyond raw parameter fit, a per-crop **key-disease** rule contributes a "disease" threat when conditions favour that crop's characteristic weather-linked disease/pest. The rule is crop-, stage- and disease-specific rather than a global threshold:
 
-A binary rule like `humidity > 90% → HIGH risk` is a poor model of biology: 88% humidity can still be risky, and 92% humidity isn't dangerous at all if the temperature is wrong for the disease in question. The fix is scoring each factor continuously on a 0–1 scale — 0 meaning "not biologically suitable," 1 meaning "ideal conditions for the disease" — rather than a yes/no threshold.
+A blanket rule like `humidity > 90% → HIGH risk` is a poor model of biology: 88% humidity can still be risky, 92% isn't dangerous if the temperature is wrong for the disease, and — critically — the disease only matters when the crop is at a **susceptible growth stage**. So humidity is never scored as a standalone band. Instead each crop carries ONE curated **key disease** (`crop_rules.json`) with:
 
-**Temperature suitability** — most diseases have an optimal range with a bell-curve falloff on either side:
+- a **temperature + humidity favouring rule** — a temperature range plus a humidity threshold: `humidity_min` for humid-favoured diseases (wheat rust, rice blast), or `humidity_max` for hot-**dry**-favoured problems (cotton leaf-curl's whitefly vector, pea powdery mildew) — the opposite curve a single `humidity > 90%` rule gets backwards; and
+- **`susceptible_stages`** — the growth stages when that disease actually damages the crop.
 
-```python
-def temp_suitability(T, optimal, width):
-    return max(0, 1 - abs(T - optimal) / width)
-```
+The disease threat fires only when the weather favours the disease, and its **level and explanation are then modulated by the crop's current growth stage**: High at a susceptible stage; downgraded to a watch otherwise ("…but Maturity is a lower-risk stage for it — keep watching toward Flowering"). That crop × stage × weather logic — not a threshold — is what makes the advice explainable and hard for a generic chatbot to copy.
 
-**Humidity suitability** — most fungal diseases ramp up from a floor to a ceiling rather than switching on at one number:
-
-```python
-def humidity_suitability(H, floor=70, ceiling=90):
-    if H < floor: return 0.0
-    if H > ceiling: return 1.0
-    return (H - floor) / (ceiling - floor)
-```
-
-**Growth-stage relevance** stays a simple lookup table (a disease that mainly threatens the vegetative stage scores low at seedling or maturity).
-
-**Combining into one score**, weighted by which factor matters most for that specific disease:
-
-```
-Disease Suitability = w_temp × temp_suitability(T) + w_humidity × humidity_suitability(H) + w_stage × stage_score
-```
-
-**Not every disease favors humidity.** This is worth stating explicitly because it's the strongest argument for this model over a rigid rule: charcoal rot in soybean and whitefly-driven cotton leaf curl virus are both favored by *hot, dry* conditions — the opposite curve from fungal diseases like wheat rust or rice blast. A single `humidity > 90%` rule would be actively wrong-direction for two of our eight crops, not just imprecise.
+**Not every disease favors humidity.** This is the strongest argument for a per-crop key-disease rule over a global threshold: charcoal rot in soybean and whitefly-driven cotton leaf curl virus are both favored by *hot, dry* conditions — the opposite curve from fungal diseases like wheat rust or rice blast. A single `humidity > 90%` rule would be actively wrong-direction for some of our crops, not just imprecise (hence `humidity_max` in the rule table).
 
 | Crop | Weather-linked disease/pest | Favors |
 |---|---|---|
@@ -439,9 +428,9 @@ Disease Suitability = w_temp × temp_suitability(T) + w_humidity × humidity_sui
 | Groundnut | Tikka leaf spot vs. collar rot (waterlogging) | Humid-warm vs. excess-moisture-specific |
 | Cotton | Leaf curl virus (whitefly-vectored) | Warm + **dry** — favors the insect vector, not fungal humidity |
 
-**These are illustrative shapes, not final numbers.** The actual optimal-temperature and humidity-threshold values must be sourced from ICAR's crop-specific Plant Protection advisories before shipping — this drives real advice to a farmer, so it earns the same sourcing discipline as the crop rule table itself, at an even higher bar.
+**These thresholds are sourced.** The per-crop temperature bands and disease favouring conditions (temperature range + humidity threshold + `susceptible_stages`) are curated and **cited per crop in `backend/app/data/crop_rules.json`** (ICAR / ICRISAT / TNAU Agritech / IMD Mausam + standard extension and plant-pathology references). A domain teammate should still sanity-check them against a local package-of-practices before the finals; the file is built for a data-only edit.
 
-**Time dimension:** disease risk builds from *sustained* favorable conditions, not one instant. Average the suitability score over the last 24 hours of actual hourly data (already available from the Sprint 1 Open-Meteo connector) rather than scoring a single snapshot.
+**Time dimension:** stress and disease build from *sustained* conditions, so soil moisture is day-averaged from Open-Meteo hourly data rather than a single snapshot; the disease rule reads the current temperature and humidity.
 
 **Where this sits in the Crop Risk Index:** the **weighted crop-stress fit is the backbone** of the 0–100 score; disease suitability contributes the "disease" threat and its explanation, and — when the Trend Engine (Section 3.8) is wired — a historical-baseline-deviation term can nudge the score for a season running anomalously against its multi-year norm. v1 ships the crop-stress backbone + the per-crop disease threat; the trend term is an additive refinement, not a blocker.
 
@@ -535,7 +524,7 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 `GET /farmer/risk-score` — the weighted crop-stress score (Section 3.7). `risk_score` is 0–100, `risk_level` a band. `components` are the per-parameter fit scores (0–1) that back the number and name the problem; a missing parameter is omitted and its weight renormalized away (fail-soft), so `components` carries only the parameters that were actually available.
 ```json
 { "crop": "rice", "risk_score": 72, "risk_level": "high",
-  "components": { "temperature": 0.55, "humidity": 0.70, "soil_moisture": 0.30, "rainfall": 0.60 },
+  "components": { "temperature": 0.55, "soil_moisture": 0.30 },
   "problem": "Low soil moisture + high temperature stress",
   "data_tier": "exact", "source": "WeatherAPI + Open-Meteo (soil moisture)" }
 ```
@@ -566,9 +555,9 @@ This is the piece that makes frontend and backend work genuinely independent (Se
   "location": "Noida, Uttar Pradesh",
   "crop": "Wheat", "days_after_sowing": 48, "crop_stage": "Vegetative", "next_stage": "Flowering",
   "risk_score": 62, "risk_level": "Moderate",
-  "components": { "temperature": 0.6, "humidity": 0.45, "soil_moisture": 0.5, "rainfall": 0.7 },
+  "components": { "temperature": 0.6, "soil_moisture": 0.5 },
   "threats": [
-    { "id": "disease", "label": "Disease", "level": "High", "detail": "High humidity + mild temperatures favour fungal disease for wheat at this stage." }
+    { "id": "disease", "label": "Disease", "level": "High", "detail": "At the Flowering stage — a susceptible window for yellow rust — 92% humidity and 14°C favour it." }
   ],
   "recommended_action": { "title": "Protect against fungal disease",
     "items": ["Scout lower leaves for early lesions", "Hold off overhead irrigation", "Prepare a preventive fungicide if humidity persists"] },
@@ -674,7 +663,7 @@ This replaces the hour-by-hour hackathon-day plan with a day-based sprint plan f
 **Farmer Advisory Dashboard** (majority of this sprint's time; do not compress this to fit the schedule — extend into Sprint 4's buffer if needed):
 
 1. Crop profile setup (crop, field location, sowing date) as a persistent Postgres record.
-2. **Expanded crop rule table — 8 crops**, covering both major Indian cropping seasons so the demo isn't season-locked:
+2. **Expanded crop rule table — 8 staples (12 crops locked; see the crop-list note below)**, covering both major Indian cropping seasons so the demo isn't season-locked:
 
    | Crop | Season | Example sourced threshold |
    |---|---|---|
@@ -689,9 +678,9 @@ This replaces the hour-by-hour hackathon-day plan with a day-based sprint plan f
 
    Source this from ICAR's seasonal Kharif/Rabi Agro-Advisories, IMD-ICAR-CRIDA District-level Crop Weather Calendars, and state Gramin Krishi Mausam Sewa (GKMS) bulletins — all public. Cite these sources explicitly in the pitch; naming real institutional sources materially strengthens credibility over an unsourced rule table.
 
-   **Crop list (locked, Sprint 3):** the eight staples above **plus potato, peas, and tomato, and a generic pulses entry** — covering the crops shown in the current UI and the risk-model research set. A broader table means more curated numbers to get right: every optimal range (and per-crop key-disease condition) not yet verified against ICAR/GKMS **ships flagged as provisional** in the data file and is surfaced to a teammate for verification before the demo — never presented as authoritative while unverified (CLAUDE.md).
+   **Crop list (locked, Sprint 3):** wheat, rice, maize, cotton, soybean, groundnut, mustard, gram, pea, potato, tomato, lentil — the eight staples plus potato, pea, tomato, and lentil. **Optimal-temperature bands and key-disease conditions are sourced and cited per crop** in `crop_rules.json` (ICAR / ICRISAT / TNAU Agritech / IMD Mausam, plus standard extension and peer-reviewed plant-pathology references), so the response's `provisional` flag is now false. The **humidity comfort bands** and the **volumetric soil-moisture bands** remain documented **engineering approximations** — a crop's optimal volumetric soil moisture (m³/m³) is not an ICAR-published quantity (ICAR schedules irrigation by IW/CPE ratio or crop coefficients), and humidity comfort is stage/variety dependent. A domain teammate should still sanity-check all bands against local package-of-practices before the final demo.
 3. Harvest/action-timing advisory logic (forecast × growth stage × rule table).
-4. **Crop Risk Index — weighted crop-stress model** (Section 3.7): per-parameter fit scores (temperature / humidity / soil-moisture / rainfall) against each crop's curated optimal range, weighted `0.35·T + 0.25·H + 0.25·M + 0.15·R`, inverted to a 0–100 risk and mapped to a Low/Moderate/High/Very-High band. **Fail-soft:** renormalize the weights over whatever parameters are available. **Soil moisture** is fetched best-effort from Open-Meteo (a separate call). A per-crop **key-disease** rule adds the explained "disease" threat. Averaged over a rolling ~24h window. Source the optimal ranges + disease conditions from ICAR/GKMS before treating them as authoritative — this drives real advice, so it earns extra sourcing care; any number not yet verified ships **clearly flagged as provisional**.
+4. **Crop Risk Index — weighted crop-stress model** (Section 3.7): fit scores for **temperature and soil moisture** against each crop's optimal range, weighted `0.60·T + 0.40·soil`, inverted to a 0–100 risk and banded. **Fail-soft:** renormalize the weights over whatever's available. **Humidity is not a fit term** — its risk is crop- and stage-specific, so it drives the **stage-aware disease threat** (each crop's key disease has a temp+humidity favouring rule *and* `susceptible_stages`; the threat's level + explanation depend on the crop's current stage). **Rainfall** is an explicit threat too (heavy rain), not a fit term. **Soil moisture** is best-effort from Open-Meteo (volumetric m³/m³). The temperature bands + disease conditions are **sourced and cited** per crop in `crop_rules.json`; the humidity and volumetric soil-moisture bands are documented **approximations** (a volumetric soil-moisture optimum isn't ICAR-published).
 5. **Threats + advisory from the score**: the weakest parameter(s) name the `threats[]` and select a curated `recommended_action`, so every warning is *explained* (scope §3), never a bare gauge. The Trend Engine's historical-baseline-deviation term (below) is an additive refinement to the score, not a v1 blocker.
 6. Free-text crop Q&A routed through the Sprint 2 LLM pipeline with the rule table injected as grounding context.
 
@@ -721,7 +710,7 @@ This replaces the hour-by-hour hackathon-day plan with a day-based sprint plan f
 3. **Disaster Safety Guidance + Active Emergency Mode** (Section 3.9): curate the Hazard Safety Guide (flood, cyclone, heatwave, thunderstorm/lightning, cold wave) sourced from NDMA's Do's and Don'ts guidance; wire the severity check that triggers Active Emergency Mode at the highest alert tier, showing action steps and the verified helpline block (NDMA 1078, Emergency 112). This is the most safety-sensitive feature in the product — hold it to the strictest sourcing discipline, and explicitly flag the real-time-shelter-data gap as a known limitation rather than fabricating it.
 4. **PWA + connectivity layer**: build the full layered strategy from Section 3.6 — web app manifest + cache-first service worker for the app shell, IndexedDB for the farmer's profile and recent forecast/alert/advisory history, a template-based offline responder for common structured queries (no LLM/network needed), and Background Sync to queue and auto-retry anything that needed the network. This is genuinely on-theme for the PS's "rural accessibility" framing and was explicitly out of scope for the hackathon-hours version of this plan — treat it as a first-order feature, not a Sprint 4 afterthought.
 5. **Personalized digest**: a settings screen (preferred time, language, content toggles) and a per-user APScheduler job that assembles a digest by reusing the grounding assembler, delivered via push or queued through the same Background Sync path built in this sprint.
-6. **Expand and harden the test suite**: cover the risk-index calculator (including the Disease Suitability Model and Trend Engine), the trip-planning router, and the multilingual pipeline, not just the degradation ladder from Sprint 1. Keep CI green throughout the remaining sprints — a red CI pipeline right before the deadline is a bad place to discover a regression.
+6. **Expand and harden the test suite**: cover the Crop Risk Index (weighted crop-stress fit + stage-aware disease threat) and the Trend Engine, the trip-planning router, and the multilingual pipeline, not just the degradation ladder from Sprint 1. Keep CI green throughout the remaining sprints — a red CI pipeline right before the deadline is a bad place to discover a regression.
 
 **Checkpoint at end of Sprint 4:** alerts trigger reliably and are visible in both the general and disaster-manager views; the app functions (in a degraded but real way) with the network disabled; CI is green.
 
@@ -770,7 +759,7 @@ With 12–13 days instead of 36 hours, the team shouldn't need harsh cuts — bu
 7. Trend Engine's contribution to the Risk Index (fall back to Disease Suitability + extreme-weather proximity only, drop the historical-baseline term)
 8. Automated test suite depth (keep the Sprint 1 baseline tests; skip expanding coverage further)
 
-**Never cut, regardless of schedule pressure:** the grounding assembler and degradation ladder (the anti-hallucination/anti-refusal story mapping directly to the "accuracy" evaluation criterion), the Farmer Advisory Dashboard core logic — crop rule table, Disease Suitability Model, harvest-timing advisory, and Crop Risk Index (the flagship differentiation argument from Section 2.1), **Disaster Safety Guidance's sourced content and the Active Emergency Mode helpline block** (once built, this is safety-relevant content — better to ship it correctly or clearly mark it as not yet reliable than to half-cut it), the alert-trigger demo path, and a working deployed instance.
+**Never cut, regardless of schedule pressure:** the grounding assembler and degradation ladder (the anti-hallucination/anti-refusal story mapping directly to the "accuracy" evaluation criterion), the Farmer Advisory Dashboard core logic — the curated crop rule table and the Crop Risk Index (weighted crop-stress fit + stage-aware disease threat + recommended action), the flagship differentiation argument from Section 2.1, **Disaster Safety Guidance's sourced content and the Active Emergency Mode helpline block** (once built, this is safety-relevant content — better to ship it correctly or clearly mark it as not yet reliable than to half-cut it), the alert-trigger demo path, and a working deployed instance.
 
 **If running ahead of schedule, in this order of value:**
 
@@ -790,7 +779,7 @@ With 12–13 days instead of 36 hours, the team shouldn't need harsh cuts — bu
 - [ ] Automated test suite (degradation ladder, risk-index calculator, connectors)
 - [ ] Auto-generated API documentation (Swagger/OpenAPI)
 - [ ] Architecture diagram (this document, Section 3.1)
-- [ ] Farmer Advisory Dashboard working end-to-end across all 8 crops (crop profile, harvest-timing advisory, Disease Suitability Model, Crop Risk Index with historical baseline)
+- [ ] Farmer Advisory Dashboard working end-to-end across all 12 crops (Crop Planning + Crop Watch: Crop Risk Index, stage-aware disease threat, recommended action)
 - [ ] Trend Engine feeding the Risk Index and a standalone Trend-Informed Advisory query
 - [ ] Trip planning flow working end-to-end for at least one route (rated stops + nearby facilities)
 - [ ] Disaster Manager severity-sorted alert view with Trend Engine context
@@ -831,6 +820,8 @@ This section tracks what has actually been built versus the plan above, and — 
 - **Voice input and output** — Web Speech API: speech-to-text into the chat input and read-aloud of any answer, both in the selected language (buttons hide where the browser lacks support).
 - **User Settings screen** — reached from the header menu (a focused screen with its own back control, not a nav tab): app **language**, a **default location** + a curated **saved-places** list, and **Farmer-Mode preferences** (crop + farm location) persisted now and consumed by Farmer Mode when its live advisories land (Sprint 3). All device-scoped via `localStorage` (`lib/preferences.js`), migrating to a user profile with accounts (§8.2).
 - **Chat session persistence + context** — the conversation persists on-device (~1 day) and restores on return, so leaving chat and coming back resumes it instead of starting cold (`lib/chatSession.js`); a "New chat" control starts fresh. Starter suggestions are **conditions-aware and localized** (localized label shown, English canonical query sent so backend location-parsing/grounding is unaffected).
+- **Farmer Mode — persona entry + Crop Planning (frontend)** — Farmer Mode is a persisted **persona** (§2.2): entered from the header menu ("Switch to Farmer Mode"), lands on Crop Watch, remembered on-device (`lib/preferences`), with a switch back to the normal persona and the internal Crop Planning ↔ Crop Watch nav. **Crop Planning** is wired to the documented `/farmer/crop-planning` shape via an `api/cropPlanning` swap-point (demo fixture today, provenance-labelled).
+- **Farmer Mode — Crop Watch backend (Crop Risk Index)** — the weighted crop-stress engine (§3.7): temperature + soil-moisture fit (0.60/0.40, fail-soft), a **stage-aware** key-disease threat and a heavy-rain threat (each explained), growth stage from days-after-sowing, and a curated **sourced/cited** 12-crop rule table (`data/crop_rules.json`). Soil moisture comes from a best-effort Open-Meteo connector (WeatherAPI has none). Served by the composite `GET /farmer/crop-watch` (§3.10); never bare-refuses. *(Frontend Crop Watch still renders the demo fixture — wiring it to this endpoint is the next step, §8.2.)*
 
 ### 8.2 Backlog — UI or scaffolding that still needs a backend
 
@@ -842,8 +833,8 @@ The "don't let it stay a UI-only feature" list. Each row has a working front end
 | Location entry / selection | **✅ shipped** — location input + a **default location** and **saved-places** list in a Settings screen, persisted in `localStorage` | saved locations in Postgres once user profiles exist |
 | App language / voice | **✅ shipped** — whole-app i18n (6 languages) + Web Speech voice in/out, chosen in Settings | native-speaker review of bn/ta/mr/pa; migrate Disaster/Travel/Farmer mock screens onto the i18n keys |
 | Farmer-Mode preferences | UI shipped in Settings (crop + farm location, persisted) | consumed by the Sprint-3 Farmer Advisory backend (profile → risk/advisory) |
-| Crop Planning (Farmer Mode) | demo fixture, provenance-labelled; shape documented (§3.10 `/farmer/crop-planning`) | real `GET /farmer/crop-planning` (location + season + climate suitability → ~3–4 crops) |
-| Crop Watch (Farmer Mode) | demo fixture, provenance-labelled; shape documented (§3.10 `/farmer/crop-watch`) | composite `GET /farmer/crop-watch` backed by the weighted Crop Risk Index (§3.7) + a curated, cited crop rule table; `threats[]` each explained |
+| Crop Planning (Farmer Mode) | **UI + persona entry shipped**; wired to the documented shape via an `api/cropPlanning` swap-point (demo fixture) | real `GET /farmer/crop-planning` (location + season + climate suitability → ~3–4 crops) |
+| Crop Watch (Farmer Mode) | UI demo fixture; **backend built** — composite `GET /farmer/crop-watch` + Crop Risk Index (§3.7) + sourced 12-crop rule table | **wire the frontend to the endpoint** (replace the fixture via an `api/cropWatch` swap-point) — the last step |
 | Disaster alerts list | mock `/disaster/alerts` shape | live IMD-backed `GET /disaster/alerts` |
 | Disaster alert details + safety guidance | a hardcoded generic advice line in the UI | **NDMA-sourced Hazard Safety Guide** (`GET /disaster/safety-guide`, Section 3.9) — hazard-specific, curated, cited |
 | Rescue facilities | demo mock (no `data_tier`) | real `GET /disaster/rescue-facilities/{location}` (e.g. Google Places) |
