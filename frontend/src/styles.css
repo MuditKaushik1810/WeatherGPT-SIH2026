@@ -2838,19 +2838,6 @@ button:focus-visible {
   background: #eef3ea;
 }
 
-<<<<<<< HEAD
-
-
-
-
-
-
-
-
-
-
-
-=======
 /* Crop Watch risk badge (Farmer Mode) */
 .crop-risk-badge {
   align-self: flex-start;
@@ -2870,10 +2857,11 @@ button:focus-visible {
   background: #f4ecd6;
   color: #7a5a1e;
 }
->>>>>>> origin/main
+
 
 /* Crop Planning's climate card stacks its heading/summary/note as a normal block —
    it must NOT inherit Crop Watch's 3-column icon|content|arrow grid (same class). */
 .climate-context-block {
   display: block;
 }
+
