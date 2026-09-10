@@ -171,106 +171,15 @@ button:focus-visible {
 
 .postcard-artwork {
   position: relative;
-  min-height: 245px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, #dce9df 0%, #eef1df 64%, #d8d9c2 64%, #c6c9ad 100%);
+  background: #e8eadf;
 }
 
-.postcard-sun {
-  position: absolute;
-  top: 28px;
-  right: 46px;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: rgba(255, 221, 130, 0.75);
+.postcard-image {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-
-.postcard-skyline {
-  position: absolute;
-  inset: auto 0 0;
-  height: 125px;
-}
-
-.building {
-  position: absolute;
-  bottom: 0;
-  border-radius: 7px 7px 0 0;
-  background: #9b9d7e;
-}
-
-.building-one {
-  left: 5%;
-  width: 24%;
-  height: 70px;
-}
-
-.building-two {
-  left: 29%;
-  width: 32%;
-  height: 95px;
-}
-
-.building-three {
-  right: 5%;
-  width: 29%;
-  height: 62px;
-}
-
-.minaret {
-  position: absolute;
-  left: 49%;
-  bottom: 18px;
-  width: 17px;
-  height: 108px;
-  border-radius: 8px 8px 2px 2px;
-  background: #a9a485;
-}
-
-.minaret::before {
-  content: "";
-  position: absolute;
-  top: -16px;
-  left: -8px;
-  width: 33px;
-  height: 18px;
-  border-radius: 50% 50% 3px 3px;
-  background: #9b9d7e;
-}
-
-.minaret::after {
-  content: "";
-  position: absolute;
-  top: -31px;
-  left: 4px;
-  width: 9px;
-  height: 20px;
-  border-radius: 50% 50% 0 0;
-  background: #8f9275;
-}
-
-.dome {
-  position: absolute;
-  left: 18%;
-  bottom: 52px;
-  width: 82px;
-  height: 42px;
-  border-radius: 82px 82px 5px 5px;
-  background: #aaa88a;
-}
-
-.postcard-placeholder {
-  position: absolute;
-  right: 18px;
-  bottom: 15px;
-  padding: 5px 9px;
-  border-radius: 99px;
-  background: rgba(255, 253, 248, 0.62);
-  color: #5c685f;
-  font-size: 10px;
-}
-
 .postcard-weather {
   position: absolute;
   inset: 0;
@@ -278,7 +187,7 @@ button:focus-visible {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px 28px;
+  padding: 18px 22px;
   background: linear-gradient(90deg, rgba(255, 253, 248, 0.76) 0%, rgba(255, 253, 248, 0.38) 48%, rgba(255, 253, 248, 0.08) 100%);
 }
 
@@ -289,7 +198,7 @@ button:focus-visible {
 }
 
 .temperature {
-  font-size: clamp(58px, 12vw, 78px);
+  font-size: clamp(46px, 9vw, 58px);
   line-height: 0.9;
   letter-spacing: -3px;
   font-weight: 800;
@@ -577,9 +486,8 @@ button:focus-visible {
     margin-left: 52px;
   }
 
-  .postcard-artwork {
-    min-height: 225px;
-  }
+  
+  .postcard-artwork { aspect-ratio: 16 / 7; }
 
   .postcard-weather {
     padding: 20px 22px;
@@ -2888,6 +2796,19 @@ button:focus-visible {
   background: #eef3ea;
 }
 
+<<<<<<< HEAD
+
+
+
+
+
+
+
+
+
+
+
+=======
 /* Crop Watch risk badge (Farmer Mode) */
 .crop-risk-badge {
   align-self: flex-start;
@@ -2907,3 +2828,4 @@ button:focus-visible {
   background: #f4ecd6;
   color: #7a5a1e;
 }
+>>>>>>> origin/main

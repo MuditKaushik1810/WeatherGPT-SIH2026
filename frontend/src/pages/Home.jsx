@@ -116,7 +116,7 @@ function Home() {
 
           {status === 'success' && !notFound && data && (
             <>
-              <WeatherPostcard weather={data.current} />
+              <WeatherPostcard weather={data.current} location={data.location} />
               <RecommendationCard recommendation={data.recommendation} />
               {data.hourly?.length > 0 && <HourlyForecast forecast={data.hourly} />}
             </>

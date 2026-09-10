@@ -33,8 +33,6 @@ const en = {
   'home.errorTitle': "Couldn't reach the weather service.",
   'home.retry': 'Retry',
   'home.notFound': 'We couldn’t find “{location}”. Try a nearby city or district name.',
-
-  'postcard.placeholder': 'Postcard artwork',
   'postcard.feelsLike': 'Feels like {value}',
   'postcard.unavailable': 'Unavailable',
   'metric.humidity': 'Humidity',
@@ -138,8 +136,6 @@ const hi = {
   'home.errorTitle': 'मौसम सेवा तक नहीं पहुँच सके।',
   'home.retry': 'पुनः प्रयास करें',
   'home.notFound': 'हमें “{location}” नहीं मिला। कोई नज़दीकी शहर या ज़िला आज़माएँ।',
-
-  'postcard.placeholder': 'पोस्टकार्ड चित्र',
   'postcard.feelsLike': 'महसूस {value}',
   'postcard.unavailable': 'उपलब्ध नहीं',
   'metric.humidity': 'आर्द्रता',
@@ -243,8 +239,6 @@ const bn = {
   'home.errorTitle': 'আবহাওয়া পরিষেবায় পৌঁছানো যায়নি।',
   'home.retry': 'আবার চেষ্টা করুন',
   'home.notFound': 'আমরা “{location}” খুঁজে পাইনি। কাছের কোনো শহর বা জেলা চেষ্টা করুন।',
-
-  'postcard.placeholder': 'পোস্টকার্ড ছবি',
   'postcard.feelsLike': 'অনুভূত {value}',
   'postcard.unavailable': 'অনুপলব্ধ',
   'metric.humidity': 'আর্দ্রতা',
@@ -348,8 +342,6 @@ const ta = {
   'home.errorTitle': 'வானிலை சேவையை அணுக முடியவில்லை.',
   'home.retry': 'மீண்டும் முயற்சிக்கவும்',
   'home.notFound': '“{location}” எங்களால் கண்டுபிடிக்க முடியவில்லை. அருகிலுள்ள நகரம் அல்லது மாவட்டத்தை முயற்சிக்கவும்.',
-
-  'postcard.placeholder': 'அஞ்சல் அட்டை படம்',
   'postcard.feelsLike': 'உணர்வு {value}',
   'postcard.unavailable': 'கிடைக்கவில்லை',
   'metric.humidity': 'ஈரப்பதம்',
@@ -453,8 +445,6 @@ const mr = {
   'home.errorTitle': 'हवामान सेवेपर्यंत पोहोचता आले नाही.',
   'home.retry': 'पुन्हा प्रयत्न करा',
   'home.notFound': 'आम्हाला “{location}” सापडले नाही. जवळचे शहर किंवा जिल्हा वापरून पाहा.',
-
-  'postcard.placeholder': 'पोस्टकार्ड चित्र',
   'postcard.feelsLike': 'जाणवते {value}',
   'postcard.unavailable': 'अनुपलब्ध',
   'metric.humidity': 'आर्द्रता',
@@ -558,8 +548,6 @@ const pa = {
   'home.errorTitle': 'ਮੌਸਮ ਸੇਵਾ ਤੱਕ ਨਹੀਂ ਪਹੁੰਚ ਸਕੇ।',
   'home.retry': 'ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
   'home.notFound': 'ਸਾਨੂੰ “{location}” ਨਹੀਂ ਮਿਲਿਆ। ਕੋਈ ਨੇੜਲਾ ਸ਼ਹਿਰ ਜਾਂ ਜ਼ਿਲ੍ਹਾ ਅਜ਼ਮਾਓ।',
-
-  'postcard.placeholder': 'ਪੋਸਟਕਾਰਡ ਤਸਵੀਰ',
   'postcard.feelsLike': 'ਮਹਿਸੂਸ {value}',
   'postcard.unavailable': 'ਉਪਲਬਧ ਨਹੀਂ',
   'metric.humidity': 'ਨਮੀ',
