@@ -4,10 +4,13 @@ Run locally with: uvicorn app.main:app --reload --app-dir backend
 """
 import os
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 # Load backend/.env (if present) so local dev can set WEATHERAPI_KEY /
 # FRONTEND_ORIGINS without exporting them every shell. Pointed explicitly at
@@ -22,6 +25,9 @@ from app.core.home_view import get_home_view  # noqa: E402
 from app.core.chat import answer_query  # noqa: E402
 from app.farmer.crop_watch import get_crop_watch  # noqa: E402
 from app.farmer.crop_planning import get_crop_planning  # noqa: E402
+from app.trip.trip_planner import get_trip_plan  # noqa: E402
+
+_IST = ZoneInfo("Asia/Kolkata")
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
@@ -123,3 +129,35 @@ def farmer_crop_planning(location: str = ""):
     curated crop table + live temperature (never LLM-invented); never bare-refuses.
     """
     return get_crop_planning(location)
+
+
+class TripRequest(BaseModel):
+    # `from` is a Python keyword, so accept it via alias while exposing `from_`
+    # internally; populate_by_name lets tests construct it with either name.
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: str = Field(alias="from")
+    to: str
+    # Optional ISO-8601 departure time (treated as IST when naive). Defaults to
+    # the next whole hour in the planner.
+    departure: str | None = None
+
+
+@app.post("/trip-plan")
+def trip_plan(request: TripRequest):
+    """
+    Route-aware stop planner (Section 3.10): geocodes origin + destination, routes
+    between them (Geoapify), samples checkpoints, and rates each stop from the
+    forecast at its ETA (our WeatherAPI→Open-Meteo pipeline) plus nearby facilities
+    (Geoapify Places). Provenance is split — weather_source vs routing_source.
+    Never bare-refuses: an unresolved endpoint or a dead source returns a stable,
+    honestly-labelled shape.
+    """
+    departure = None
+    if request.departure:
+        try:
+            parsed = datetime.fromisoformat(request.departure)
+            departure = parsed if parsed.tzinfo else parsed.replace(tzinfo=_IST)
+        except ValueError:
+            departure = None  # unparseable → planner defaults to next whole hour
+    return get_trip_plan(request.from_, request.to, departure=departure)

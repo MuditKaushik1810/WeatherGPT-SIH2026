@@ -36,6 +36,13 @@ service, so you don't hand-enter build/start commands.
    Open-Meteo, then to historical baselines. (`FRONTEND_ORIGINS` is set in
    step 3 of the next section, once the frontend URL exists.)
 
+   While you're there, add **`GEOAPIFY_API_KEY`** = your key from
+   https://www.geoapify.com/ (free plan) — it powers the Trip Planner's routing,
+   reverse geocoding, and nearby-facility lookup (`POST /trip-plan`). Without it
+   that one endpoint fails soft to a "routing unavailable" shape; the rest of
+   the app is unaffected. (LLM keys `GEMINI_API_KEY` / `GROQ_API_KEY` are
+   optional — `/chat` returns deterministic grounded answers without them.)
+
 **Verify the backend:**
 - `https://<your-api>.onrender.com/` → `{"status":"ok","service":"WeatherGPT API"}`
 - `https://<your-api>.onrender.com/home/Delhi` → current + hourly + recommendation;
