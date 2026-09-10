@@ -5,11 +5,10 @@ folder:
 
 **File:** [`WEATHERGPT-SIH26068-TheHonouredOne.pptx`](WEATHERGPT-SIH26068-TheHonouredOne.pptx)
 
-If GitHub does not preview the `.pptx` inline, download it from the file view, or
-open it via a public Google Drive / OneDrive **viewer** link (verify it while
-logged out before submitting):
+GitHub does not preview `.pptx` inline, so for a one-click view use the Google
+Slides link below (open it while logged out to confirm anyone can view it):
 
-**Presentation link:** _add a public viewer link here if needed_
+**Presentation (Google Slides):** https://docs.google.com/presentation/d/135J9qX9mrWnsX3U3k_naLwAHGtMaTZAV/edit?usp=sharing
 
 Slide order: problem, proposed solution, architecture, key features,
 implementation, screenshots/demo, impact, and future scope.

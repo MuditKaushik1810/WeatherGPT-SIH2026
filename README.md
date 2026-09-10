@@ -57,6 +57,7 @@ More views in [`assets/screenshots/`](assets/screenshots/).
 - [Architecture and build plan](docs/SIH26068_WeatherGPT_Architecture_and_Build_Plan.md)
 - [Feature brief](docs/SIH26068_WeatherGPT_Feature_Brief.md)
 - [Deployment notes](docs/DEPLOYMENT.md)
+- [Presentation deck (Google Slides)](https://docs.google.com/presentation/d/135J9qX9mrWnsX3U3k_naLwAHGtMaTZAV/edit?usp=sharing)
 - [Submission checklist](SUBMISSION_GUIDE.md)
 
 ## Team
