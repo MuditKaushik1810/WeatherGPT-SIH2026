@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchCropPlanning } from '../api/cropPlanning'
-import { setPersona } from '../lib/preferences'
+import { getSavedLocation } from '../lib/savedLocation'
+import { getFarmerPrefs, getDefaultLocation, setPersona } from '../lib/preferences'
 
 function goTo(hash) {
   window.location.hash = hash
@@ -13,14 +14,15 @@ function exitFarmerMode() {
 }
 
 export default function CropPlanning() {
-  // Data comes through the api module (demo fixture today, real GET
-  // /farmer/crop-planning later — §3.10). The screen is built against that stable
-  // shape, so the fixture→backend swap needs no changes here.
+  // Data comes through the api module (live GET /farmer/crop-planning, demo fixture
+  // as fail-soft fallback — §3.10). The screen is built against that stable shape.
   const [data, setData] = useState(null)
 
   useEffect(() => {
     let active = true
-    fetchCropPlanning()
+    const prefs = getFarmerPrefs()
+    const location = prefs.location || getDefaultLocation() || getSavedLocation() || 'Delhi'
+    fetchCropPlanning(location)
       .then((view) => { if (active) setData(view) })
       .catch(() => {})
     return () => { active = false }
@@ -154,8 +156,9 @@ export default function CropPlanning() {
         </section>
 
         <p className="farmer-demo-note">
-          Demo data · This screen uses a frontend fixture and is not live
-          farming advice.
+          {data.data_tier === 'demo'
+            ? 'Demo data · showing a frontend fixture (the live service was unreachable).'
+            : `Live · ${data.source || 'WeatherGPT'} · suggestions rank the season's crops by temperature fit — not a substitute for local agronomic advice.`}
         </p>
 
         <nav className="farmer-bottom-nav" aria-label="Farmer Mode navigation">
