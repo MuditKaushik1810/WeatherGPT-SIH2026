@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react'
 import { fetchCropWatch } from '../api/cropWatch'
 import { getSavedLocation } from '../lib/savedLocation'
 import { getFarmerPrefs, getDefaultLocation, daysAfterSowing, setPersona } from '../lib/preferences'
+import { useI18n } from '../i18n'
 
-// The five growth stages the backend reports (§3.7). The timeline is driven by the
-// crop's actual `crop_stage` — complete before it, current, next, then future.
+// The five growth stages the backend reports (§3.7). English keys drive the
+// current-stage matching against `crop_stage`; the labels are localized for display.
 const STAGES = ['Germination', 'Vegetative', 'Flowering', 'Yield Formation', 'Maturity']
+const STAGE_KEY = {
+  Germination: 'farmer.stageGermination', Vegetative: 'farmer.stageVegetative',
+  Flowering: 'farmer.stageFlowering', 'Yield Formation': 'farmer.stageYieldFormation',
+  Maturity: 'farmer.stageMaturity',
+}
 
 function stageTimeline(currentStage) {
   const idx = STAGES.indexOf(currentStage)
@@ -30,7 +36,11 @@ function exitFarmerMode() {
 }
 
 function CropWatch() {
+  const { t } = useI18n()
   const [data, setData] = useState(null)
+
+  // Localize a stage name for display, keep unknown values (e.g. "Harvest") as-is.
+  const stageLabel = (s) => (STAGE_KEY[s] ? t(STAGE_KEY[s]) : s)
 
   useEffect(() => {
     let active = true
@@ -47,7 +57,7 @@ function CropWatch() {
     return (
       <main className="app-shell farmer-shell">
         <section className="farmer-page">
-          <p className="farmer-demo-note" role="status">Loading crop status…</p>
+          <p className="farmer-demo-note" role="status">{t('farmer.loadingWatch')}</p>
         </section>
       </main>
     )
@@ -62,7 +72,7 @@ function CropWatch() {
     <main className="app-shell farmer-shell">
       <div className="farmer-page">
         <header className="farmer-header">
-          <button className="farmer-menu-button" type="button" aria-label="Open menu" title="Menu" onClick={() => {}}>
+          <button className="farmer-menu-button" type="button" aria-label={t('farmer.openMenu')} title={t('farmer.openMenu')} onClick={() => {}}>
             <span />
             <span />
             <span />
@@ -77,10 +87,10 @@ function CropWatch() {
             className="farmer-mode-switch"
             type="button"
             onClick={exitFarmerMode}
-            aria-label="Switch to normal WeatherGPT mode"
+            aria-label={t('farmer.modeSwitchAria')}
           >
             <span aria-hidden="true">◆</span>
-            Farmer Mode
+            {t('farmer.modeSwitch')}
             <span aria-hidden="true">⌄</span>
           </button>
         </header>
@@ -102,13 +112,13 @@ function CropWatch() {
         <section className="farmer-title-card">
           <div className="farmer-leaf-mark" aria-hidden="true">✦</div>
           <div>
-            <h1>Crop Watch</h1>
-            <p>Protect what you're growing</p>
-            <span>Real-time insights on weather risks, crop health and personalised actions for your farm.</span>
+            <h1>{t('farmer.cropWatch')}</h1>
+            <p>{t('farmer.watchTagline')}</p>
+            <span>{t('farmer.watchIntro')}</span>
           </div>
           {data.risk_score != null && (
             <span className={`crop-risk-badge risk-${String(data.risk_level || '').toLowerCase().replace(/ /g, '-')}`}>
-              Risk {data.risk_level} · {data.risk_score}
+              {t('farmer.risk')} {data.risk_level} · {data.risk_score}
             </span>
           )}
         </section>
@@ -116,21 +126,21 @@ function CropWatch() {
         <section className="crop-details-card" aria-labelledby="crop-details-heading">
           <div className="farmer-section-heading">
             <span className="section-icon crop-icon" aria-hidden="true">✦</span>
-            <h2 id="crop-details-heading">Your Crop Details</h2>
+            <h2 id="crop-details-heading">{t('farmer.yourCropDetails')}</h2>
           </div>
 
           <div className="crop-detail-grid">
             <div>
-              <span>Crop Type</span>
+              <span>{t('farmer.cropType')}</span>
               <strong style={{ textTransform: 'capitalize' }}>{data.crop}</strong>
             </div>
             <div>
-              <span>Days After Sowing</span>
-              <strong>{data.days_after_sowing != null ? `${data.days_after_sowing} days` : '—'}</strong>
+              <span>{t('farmer.daysAfterSowing')}</span>
+              <strong>{data.days_after_sowing != null ? t('farmer.daysValue', { n: data.days_after_sowing }) : '—'}</strong>
             </div>
             <div>
-              <span>Crop Stage</span>
-              <strong>{data.crop_stage ? `${data.crop_stage} → ${data.next_stage}` : 'Set a sowing date'}</strong>
+              <span>{t('farmer.cropStage')}</span>
+              <strong>{data.crop_stage ? `${stageLabel(data.crop_stage)} → ${stageLabel(data.next_stage)}` : t('farmer.setSowingDate')}</strong>
             </div>
           </div>
 
@@ -138,13 +148,13 @@ function CropWatch() {
             {stages.map((stage, index) => (
               <div key={stage.label} className={`crop-stage ${stage.state}`}>
                 <span className="crop-stage-node">{stage.symbol}</span>
-                <span>{stage.label}</span>
+                <span>{stageLabel(stage.label)}</span>
                 {index < stages.length - 1 && <i aria-hidden="true" />}
               </div>
             ))}
           </div>
           {!data.crop_stage && (
-            <p className="farmer-demo-note">Add your sowing date in Settings to see the growth stage and stage-specific disease risk.</p>
+            <p className="farmer-demo-note">{t('farmer.stageHint')}</p>
           )}
         </section>
 
@@ -152,13 +162,13 @@ function CropWatch() {
           <div className="farmer-section-heading">
             <span className="section-icon alert-icon" aria-hidden="true">!</span>
             <div>
-              <h2 id="threats-heading">Weather Threats</h2>
-              <p>Based on current conditions, forecast and crop stage</p>
+              <h2 id="threats-heading">{t('farmer.weatherThreats')}</h2>
+              <p>{t('farmer.threatsSubtitle')}</p>
             </div>
           </div>
 
           {threats.length === 0 ? (
-            <p className="farmer-demo-note">No notable weather threats for {data.crop} right now.</p>
+            <p className="farmer-demo-note">{t('farmer.noThreats', { crop: data.crop })}</p>
           ) : (
             <div className="threat-list">
               {threats.map((threat) => (
@@ -179,7 +189,7 @@ function CropWatch() {
         <section className="farmer-action-card" aria-labelledby="action-heading">
           <span className="action-icon" aria-hidden="true">!</span>
           <div>
-            <h2 id="action-heading">Recommended Action</h2>
+            <h2 id="action-heading">{t('farmer.recommendedAction')}</h2>
             <strong>{action.title}</strong>
             <ul>
               {(action.items || []).map((item) => <li key={item}>{item}</li>)}
@@ -192,7 +202,7 @@ function CropWatch() {
           <section className="climate-context-card" aria-labelledby="climate-heading">
             <span className="climate-icon" aria-hidden="true">◎</span>
             <div>
-              <h2 id="climate-heading">Climate Context</h2>
+              <h2 id="climate-heading">{t('farmer.climateContext')}</h2>
               <div className="climate-title-row">
                 <strong>{data.climate_context.title}</strong>
                 {data.climate_context.level && (
@@ -207,18 +217,18 @@ function CropWatch() {
 
         <p className="farmer-demo-note">
           {isDemo
-            ? 'Demo data · showing a frontend fixture (the live service was unreachable).'
-            : `Live · ${data.source || 'WeatherGPT'}${data.provisional ? ' · provisional crop thresholds' : ''}`}
+            ? t('farmer.demoNote')
+            : `${t('farmer.livePrefix')}${data.source || 'WeatherGPT'}${data.provisional ? ` · ${t('farmer.provisionalThresholds')}` : ''}`}
         </p>
 
         <nav className="farmer-bottom-nav" aria-label="Farmer Mode navigation">
-          <button type="button" onClick={() => goTo('#farmer/planning')} aria-label="Crop Planning">
+          <button type="button" onClick={() => goTo('#farmer/planning')} aria-label={t('farmer.cropPlanning')}>
             <span aria-hidden="true">◇</span>
-            <span>Crop Planning</span>
+            <span>{t('farmer.cropPlanning')}</span>
           </button>
           <button type="button" className="active" aria-current="page">
             <span aria-hidden="true">◆</span>
-            <span>Crop Watch</span>
+            <span>{t('farmer.cropWatch')}</span>
           </button>
         </nav>
       </div>

@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react'
 import { fetchCropPlanning } from '../api/cropPlanning'
 import { getSavedLocation } from '../lib/savedLocation'
 import { getFarmerPrefs, getDefaultLocation, setPersona } from '../lib/preferences'
+import { useI18n } from '../i18n'
+
+// Suitability + season are small backend enums — localized for display via a map,
+// falling back to the raw value + English suffix for anything unexpected.
+const SUIT_KEY = {
+  Excellent: 'farmer.suitExcellent', Good: 'farmer.suitGood',
+  Fair: 'farmer.suitFair', Marginal: 'farmer.suitMarginal',
+}
+const SEASON_KEY = { Kharif: 'farmer.seasonKharif', Rabi: 'farmer.seasonRabi' }
 
 function goTo(hash) {
   window.location.hash = hash
@@ -14,6 +23,7 @@ function exitFarmerMode() {
 }
 
 export default function CropPlanning() {
+  const { t } = useI18n()
   // Data comes through the api module (live GET /farmer/crop-planning, demo fixture
   // as fail-soft fallback — §3.10). The screen is built against that stable shape.
   const [data, setData] = useState(null)
@@ -32,21 +42,20 @@ export default function CropPlanning() {
     return (
       <main className="app-shell farmer-shell">
         <section className="farmer-page">
-          <p className="farmer-demo-note" role="status">Loading crop suggestions…</p>
+          <p className="farmer-demo-note" role="status">{t('farmer.loadingPlanning')}</p>
         </section>
       </main>
     )
   }
 
+  const suitLabel = (s) => (SUIT_KEY[s] ? t(SUIT_KEY[s]) : `${s} fit`)
+  const seasonLabel = (s) => (SEASON_KEY[s] ? t(SEASON_KEY[s]) : `${s} season`)
+
   return (
     <main className="app-shell farmer-shell">
       <section className="farmer-page">
         <header className="farmer-header">
-          <button
-            className="farmer-menu-button"
-            type="button"
-            aria-label="Open menu"
-          >
+          <button className="farmer-menu-button" type="button" aria-label={t('farmer.openMenu')}>
             ☰
           </button>
 
@@ -59,9 +68,9 @@ export default function CropPlanning() {
             className="farmer-mode-switch"
             type="button"
             onClick={exitFarmerMode}
-            aria-label="Switch to normal WeatherGPT mode"
+            aria-label={t('farmer.modeSwitchAria')}
           >
-            Farmer Mode
+            {t('farmer.modeSwitch')}
           </button>
         </header>
 
@@ -74,7 +83,7 @@ export default function CropPlanning() {
           </div>
 
           <div className="farmer-location-content">
-            <span>Current location</span>
+            <span>{t('farmer.currentLocation')}</span>
             <strong>{data.location}</strong>
           </div>
         </section>
@@ -85,49 +94,39 @@ export default function CropPlanning() {
           </div>
 
           <div>
-            <h1>Crop Planning</h1>
-            <p>Choose what to grow</p>
+            <h1>{t('farmer.cropPlanning')}</h1>
+            <p>{t('farmer.planningTagline')}</p>
           </div>
         </section>
 
         <section className="crop-planning-intro">
-          <p>
-            Recommendations based on your location, season and climate
-            suitability.
-          </p>
+          <p>{t('farmer.planningIntro')}</p>
         </section>
 
         <section className="crop-recommendation-card">
           <div className="farmer-section-heading">
-            <span className="section-icon" aria-hidden="true">
-              ✦
-            </span>
-
+            <span className="section-icon" aria-hidden="true">✦</span>
             <div>
-              <h2>Recommended crops</h2>
-              <p>Best-fit options for this season</p>
+              <h2>{t('farmer.recommendedCrops')}</h2>
+              <p>{t('farmer.bestFit')}</p>
             </div>
           </div>
 
           <div className="crop-recommendation-list">
             {data.recommendations.map((crop, index) => (
               <article
-                className={`crop-recommendation-item ${
-                  index === 0 ? 'featured' : ''
-                }`}
+                className={`crop-recommendation-item ${index === 0 ? 'featured' : ''}`}
                 key={crop.crop}
               >
                 <div className="crop-recommendation-main">
                   <h3>{crop.crop}</h3>
-                  <span className="crop-suitability">
-                    {crop.suitability} fit
-                  </span>
+                  <span className="crop-suitability">{suitLabel(crop.suitability)}</span>
                 </div>
 
                 <p>{crop.reason}</p>
 
                 <div className="crop-harvest-window">
-                  <span>Approx. harvest</span>
+                  <span>{t('farmer.approxHarvest')}</span>
                   <strong>{crop.harvest_window}</strong>
                 </div>
               </article>
@@ -135,48 +134,38 @@ export default function CropPlanning() {
           </div>
         </section>
 
-        <section className="climate-context-card">
+        <section className="climate-context-card climate-context-block">
           <div className="farmer-section-heading">
-            <span className="climate-icon" aria-hidden="true">
-              ☁
-            </span>
-
+            <span className="climate-icon" aria-hidden="true">☁</span>
             <div>
-              <h2>Climate fit</h2>
-              <p>{data.season} season</p>
+              <h2>{t('farmer.climateFit')}</h2>
+              <p>{seasonLabel(data.season)}</p>
             </div>
           </div>
 
           <p>{data.climate_context.summary}</p>
 
           <div className="historical-climate-note">
-            <strong>Historical climate</strong>
+            <strong>{t('farmer.historicalClimate')}</strong>
             <span>{data.climate_context.historical_note}</span>
           </div>
         </section>
 
         <p className="farmer-demo-note">
           {data.data_tier === 'demo'
-            ? 'Demo data · showing a frontend fixture (the live service was unreachable).'
-            : `Live · ${data.source || 'WeatherGPT'} · suggestions rank the season's crops by temperature fit — not a substitute for local agronomic advice.`}
+            ? t('farmer.demoNote')
+            : `${t('farmer.livePrefix')}${data.source || 'WeatherGPT'} · ${t('farmer.planningLiveNote')}`}
         </p>
 
         <nav className="farmer-bottom-nav" aria-label="Farmer Mode navigation">
-          <button
-            className="active"
-            type="button"
-            aria-current="page"
-          >
+          <button className="active" type="button" aria-current="page">
             <span aria-hidden="true">🌱</span>
-            <span>Crop Planning</span>
+            <span>{t('farmer.cropPlanning')}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => goTo('#farmer/watch')}
-          >
+          <button type="button" onClick={() => goTo('#farmer/watch')}>
             <span aria-hidden="true">◉</span>
-            <span>Crop Watch</span>
+            <span>{t('farmer.cropWatch')}</span>
           </button>
         </nav>
       </section>
