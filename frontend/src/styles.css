@@ -180,100 +180,6 @@ button:focus-visible {
   width: 100%;
   height: auto;
 }
-.postcard-sun {
-  position: absolute;
-  top: 28px;
-  right: 46px;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: rgba(255, 221, 130, 0.75);
-}
-
-.postcard-skyline {
-  position: absolute;
-  inset: auto 0 0;
-  height: 125px;
-}
-
-.building {
-  position: absolute;
-  bottom: 0;
-  border-radius: 7px 7px 0 0;
-  background: #9b9d7e;
-}
-
-.building-one {
-  left: 5%;
-  width: 24%;
-  height: 70px;
-}
-
-.building-two {
-  left: 29%;
-  width: 32%;
-  height: 95px;
-}
-
-.building-three {
-  right: 5%;
-  width: 29%;
-  height: 62px;
-}
-
-.minaret {
-  position: absolute;
-  left: 49%;
-  bottom: 18px;
-  width: 17px;
-  height: 108px;
-  border-radius: 8px 8px 2px 2px;
-  background: #a9a485;
-}
-
-.minaret::before {
-  content: "";
-  position: absolute;
-  top: -16px;
-  left: -8px;
-  width: 33px;
-  height: 18px;
-  border-radius: 50% 50% 3px 3px;
-  background: #9b9d7e;
-}
-
-.minaret::after {
-  content: "";
-  position: absolute;
-  top: -31px;
-  left: 4px;
-  width: 9px;
-  height: 20px;
-  border-radius: 50% 50% 0 0;
-  background: #8f9275;
-}
-
-.dome {
-  position: absolute;
-  left: 18%;
-  bottom: 52px;
-  width: 82px;
-  height: 42px;
-  border-radius: 82px 82px 5px 5px;
-  background: #aaa88a;
-}
-
-.postcard-placeholder {
-  position: absolute;
-  right: 18px;
-  bottom: 15px;
-  padding: 5px 9px;
-  border-radius: 99px;
-  background: rgba(255, 253, 248, 0.62);
-  color: #5c685f;
-  font-size: 10px;
-}
-
 .postcard-weather {
   position: absolute;
   inset: 0;
@@ -581,13 +487,7 @@ button:focus-visible {
   }
 
   
-.postcard-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  aspect-ratio: 16 / 7;
-}
+  .postcard-artwork { aspect-ratio: 16 / 7; }
 
   .postcard-weather {
     padding: 20px 22px;

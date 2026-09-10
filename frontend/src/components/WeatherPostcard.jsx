@@ -19,7 +19,7 @@ function WeatherPostcard({ weather, location }) {
 
   return (
     <section className="weather-postcard">
-      <div className="postcard-artwork" aria-label="City postcard artwork placeholder">
+      <div className="postcard-artwork" aria-label="City postcard artwork">
         <img className="postcard-image" src={postcard} alt="" aria-hidden="true" />
 
         <div className="postcard-weather">
