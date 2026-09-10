@@ -1,21 +1,19 @@
-// Crop Planning data — currently the demo fixture, served behind the documented
-// GET /farmer/crop-planning shape (Architecture doc §3.10). Keeping the fixture
-// behind this async function is the single swap point: when the backend lands,
-// replace the body with a real fetch and no screen code changes.
-//
-// The fixture is provenance-labelled (`data_tier: "demo"`), and the UI surfaces
-// that — it is never presented as live agronomic advice.
+// Crop Planning data — the live composite GET /farmer/crop-planning (Architecture
+// §3.10). Single swap-point (same pattern as api/cropWatch): it calls the real
+// endpoint and, if the service is unreachable, fails soft to the provenance-
+// labelled demo fixture so the screen always renders something honest. The fixture
+// carries `data_tier: "demo"`, which the UI surfaces.
 import fixture from '../mocks/farmerCropPlanning.json'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-// eslint-disable-next-line no-unused-vars -- `location` is part of the real
-// signature; the demo fixture ignores it until the backend exists.
 export async function fetchCropPlanning(location) {
-  // Demo: resolve the local fixture. Real backend (later):
-  //   const r = await fetch(`${BASE_URL}/farmer/crop-planning?location=${encodeURIComponent(location)}`)
-  //   if (!r.ok) throw new Error(`Crop planning service returned ${r.status}`)
-  //   return r.json()
-  void BASE_URL
-  return fixture
+  const params = new URLSearchParams({ location: location || '' })
+  try {
+    const response = await fetch(`${BASE_URL}/farmer/crop-planning?${params.toString()}`)
+    if (!response.ok) throw new Error(`Crop planning service returned ${response.status}`)
+    return await response.json()
+  } catch {
+    return fixture // fail soft to the labelled demo fixture
+  }
 }
