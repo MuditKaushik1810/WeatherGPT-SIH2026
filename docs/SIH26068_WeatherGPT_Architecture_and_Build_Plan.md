@@ -481,14 +481,14 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 ```json
 { "location": "Noida, Uttar Pradesh", "temp": 28.4, "condition": "partly cloudy",
   "precipitation_chance": 0.3, "humidity": 72, "feels_like": 31.0, "wind_speed": 12.0,
-  "aqi": 86, "warnings": [], "source": "Open-Meteo", "data_tier": "exact",
+  "aqi": 86, "warnings": [], "source": "WeatherAPI", "data_tier": "exact",
   "fetched_at": "2026-09-06T09:11:33Z" }
 ```
 
 `GET /home/{location}` — composite Home-screen view: current + hourly + a rule-based recommendation, in one response
 ```json
 { "location": "Noida, Uttar Pradesh",
-  "current": { "temp": 28.4, "condition": "partly cloudy", "data_tier": "exact", "source": "Open-Meteo" },
+  "current": { "temp": 28.4, "condition": "partly cloudy", "data_tier": "exact", "source": "WeatherAPI" },
   "hourly": [
     { "time": "2026-09-06T09:00", "temp": 28.4, "condition": "partly cloudy", "precipitation_chance": 0.3 }
   ],
@@ -511,7 +511,7 @@ This is the piece that makes frontend and backend work genuinely independent (Se
 // Response — `location` (added Sprint 2) echoes the resolved place so the client
 // can carry it forward on the next turn.
 { "answer": "Yes — 68% chance of rain tomorrow evening in Delhi.",
-  "data_tier": "exact", "source": "Open-Meteo", "query_class": "realtime",
+  "data_tier": "exact", "source": "WeatherAPI", "query_class": "realtime",
   "audio_url": null, "location": "Delhi" }
 ```
 
