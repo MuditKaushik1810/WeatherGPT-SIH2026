@@ -1,14 +1,52 @@
-# WeatherGPT — SIH 2026 (SIH26068)
+# WeatherGPT — SIH 2026
 
-A grounded, proactive, role-aware weather-intelligence platform for IMD/MoES.
-See `docs/` for the full plan before writing any code.
+**Problem Statement ID:** SIH26068
 
-## Docs (read in this order)
-1. `docs/SIH26068_WeatherGPT_Architecture_and_Build_Plan.md` — what we're building, how it's architected, the day-by-day Sprint plan, and the API contract (Section 3.10)
-2. `docs/SIH26068_WeatherGPT_Feature_Brief.md` — every feature, why it's worth building, and how feasible it is
-3. `docs/SIH26068_Team_Collaboration_and_AI_Agent_Workflow.md` — Git workflow, task board, this repo's setup steps
-4. `docs/WeatherGPT_Mockup.html` — open this in a browser for the visual walkthrough
-5. `CLAUDE.md` / `AGENTS.md` / `.cursorrules` — read automatically by AI coding agents; identical content, different filenames for different tools
+**Title:** WeatherGPT: Conversational AI for Weather Forecasting, Alerts, and Climate Information
+
+**Theme:** Disaster Management · **Category:** Software
+
+WeatherGPT is a grounded, proactive, role-aware weather-intelligence platform for IMD/MoES. It turns live weather data, forecasts, alerts, and curated domain rules into clear conversational guidance, including multilingual and voice-enabled access.
+
+## Problem statement
+
+Weather data is spread across portals, bulletins, satellite products, and forecast systems. Individuals, farmers, travellers, and disaster stakeholders need fast, contextual, actionable answers rather than raw data alone.
+
+## Proposed solution
+
+WeatherGPT combines a React web application with a FastAPI service. It retrieves live forecast data through a fail-safe source ladder, grounds conversational answers in verified data, supports Indian languages and browser voice features, and provides dedicated Farmer, Travel, and Disaster workflows.
+
+## Key features
+
+- Live current conditions and hourly forecasts with graceful fallbacks
+- Grounded, multi-turn conversational weather assistance
+- Multilingual UI and voice input/output
+- Farmer Mode: crop planning and crop-watch advisories
+- Route-aware travel planning and disaster-awareness views
+- Traceable data provenance and an API test suite in continuous integration
+
+## Technology stack
+
+- **Frontend:** React, Vite, Vitest
+- **Backend:** Python, FastAPI, Pytest
+- **Data/services:** WeatherAPI, Open-Meteo, Nominatim, Geoapify; optional Gemini/Groq for answer phrasing
+- **Deployment:** Render
+
+## Architecture and documentation
+
+- [Architecture overview](docs/architecture.md)
+- [Architecture and build plan](docs/SIH26068_WeatherGPT_Architecture_and_Build_Plan.md)
+- [Feature brief](docs/SIH26068_WeatherGPT_Feature_Brief.md)
+- [Deployment notes](docs/DEPLOYMENT.md)
+- [Submission checklist](SUBMISSION_GUIDE.md)
+
+## Team
+
+Add each official team member and their contribution before submitting.
+
+| Name | Role / contribution |
+| --- | --- |
+| _Add team member_ | _Add role_ |
 
 ## Quick start — backend
 
