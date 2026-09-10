@@ -1,5 +1,6 @@
 import ProvenanceChip from './ProvenanceChip'
 import { useI18n } from '../i18n'
+import { cityPostcards, fallbackPostcard } from '../data/cityPostcards'
 
 // Show a metric value with its unit, or an em dash when it's null. The contract
 // allows any metric to be null when its source is unavailable (see CLAUDE.md),
@@ -8,7 +9,8 @@ function show(value, unit = '') {
   return value == null ? '—' : `${value}${unit}`
 }
 
-function WeatherPostcard({ weather }) {
+function WeatherPostcard({ weather, location }) {
+  const postcard = cityPostcards[String(location ?? '').trim().toLowerCase()] || fallbackPostcard
   const { t } = useI18n()
   const rain =
     weather.precipitation_chance == null
@@ -18,15 +20,7 @@ function WeatherPostcard({ weather }) {
   return (
     <section className="weather-postcard">
       <div className="postcard-artwork" aria-label="City postcard artwork placeholder">
-        <div className="postcard-sun" />
-        <div className="postcard-skyline">
-          <span className="minaret" />
-          <span className="dome" />
-          <span className="building building-one" />
-          <span className="building building-two" />
-          <span className="building building-three" />
-        </div>
-        <span className="postcard-placeholder">{t('postcard.placeholder')}</span>
+        <img className="postcard-image" src={postcard} alt="" aria-hidden="true" />
 
         <div className="postcard-weather">
           <ProvenanceChip source={weather.source} dataTier={weather.data_tier} />
@@ -75,3 +69,5 @@ function WeatherPostcard({ weather }) {
 }
 
 export default WeatherPostcard
+
+

@@ -171,12 +171,15 @@ button:focus-visible {
 
 .postcard-artwork {
   position: relative;
-  min-height: 245px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, #dce9df 0%, #eef1df 64%, #d8d9c2 64%, #c6c9ad 100%);
+  background: #e8eadf;
 }
 
+.postcard-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .postcard-sun {
   position: absolute;
   top: 28px;
@@ -278,7 +281,7 @@ button:focus-visible {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px 28px;
+  padding: 18px 22px;
   background: linear-gradient(90deg, rgba(255, 253, 248, 0.76) 0%, rgba(255, 253, 248, 0.38) 48%, rgba(255, 253, 248, 0.08) 100%);
 }
 
@@ -289,7 +292,7 @@ button:focus-visible {
 }
 
 .temperature {
-  font-size: clamp(58px, 12vw, 78px);
+  font-size: clamp(46px, 9vw, 58px);
   line-height: 0.9;
   letter-spacing: -3px;
   font-weight: 800;
@@ -577,8 +580,14 @@ button:focus-visible {
     margin-left: 52px;
   }
 
-  .postcard-artwork {
-    min-height: 225px;
+  
+.postcard-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+    aspect-ratio: 16 / 7; height: auto;
   }
 
   .postcard-weather {
@@ -2887,3 +2896,11 @@ button:focus-visible {
 .header-menu-item:hover {
   background: #eef3ea;
 }
+
+
+
+
+
+
+
+
