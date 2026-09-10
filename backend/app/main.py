@@ -21,6 +21,7 @@ from app.core.degradation_ladder import get_weather  # noqa: E402  (after load_d
 from app.core.home_view import get_home_view  # noqa: E402
 from app.core.chat import answer_query  # noqa: E402
 from app.farmer.crop_watch import get_crop_watch  # noqa: E402
+from app.farmer.crop_planning import get_crop_planning  # noqa: E402
 
 app = FastAPI(title="WeatherGPT API", version="0.1.0")
 
@@ -111,3 +112,14 @@ def farmer_crop_watch(crop: str, location: str, days_after_sowing: int | None = 
     the crop rule thresholds still need ICAR/GKMS verification.
     """
     return get_crop_watch(crop, location, days_after_sowing)
+
+
+@app.get("/farmer/crop-planning")
+def farmer_crop_planning(location: str = ""):
+    """
+    Crop Planning view (Section 3.10) — "what should I grow?": the current season's
+    crops ranked by how well the location's temperature fits each crop's optimal
+    band, with a short reason and an approximate harvest window. Grounded in the
+    curated crop table + live temperature (never LLM-invented); never bare-refuses.
+    """
+    return get_crop_planning(location)
