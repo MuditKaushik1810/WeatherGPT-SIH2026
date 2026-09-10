@@ -1164,6 +1164,48 @@ button:focus-visible {
   cursor: pointer;
 }
 
+/* Inline From/To editor (revealed by Edit) */
+
+.trip-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trip-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.trip-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.trip-edit-plan,
+.trip-edit-cancel {
+  border-radius: 12px;
+  padding: 9px 16px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.trip-edit-plan {
+  border: 0;
+  background: #357149;
+  color: #fffdf8;
+}
+
+.trip-edit-cancel {
+  border: 1px solid #d8ddd2;
+  background: transparent;
+  color: #50704f;
+}
+
 /* Journey overview */
 
 .journey-overview {
